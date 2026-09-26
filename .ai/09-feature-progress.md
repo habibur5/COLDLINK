@@ -1,7 +1,7 @@
 # Feature Progress
 
 **Current state: design complete, no application code confirmed.** Nothing is `Completed`.
-Design work done: concept/scope, three-tier architecture, module layout, stack, matching/route/cost/ranking approach, booking + capacity rules, REST API design, DB schema (`10`), project proposal.
+Design work done: concept/scope, three-tier architecture, module layout, stack, matching/route/cost/ranking approach, booking + capacity rules, REST API design, DB schema (`10`), project proposal, task-level schedule with dependencies and critical path (`11`).
 
 ## Status values
 `Not started` · `In progress` · `Partial` · `Done` · `Blocked`
@@ -25,21 +25,27 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 | service-requests | Not started | |
 | matching | Not started | |
 | recommendations | Not started | |
-| routes | Not started | |
-| road-network | Not started | source undecided (`00`) |
+| routes | Not started | provider-abstracted, default OSRM (`01` §Routing) |
 | costs | Not started | |
 | bookings | Not started | |
 | notifications | Not started | includes Socket.IO |
 | reviews | Not started | optional |
 | admin | Not started | v1 scope undecided |
+| jobs | Not started | TTL sweep, retention pruning, async notification delivery, rating recalc (Redis + BullMQ) |
+| feature-flags | Not started | flat named flags + custom roles, precedence user > provider > role > global, Redis-cached |
 
 ## Infrastructure
 | Item | Status | Notes |
 |---|---|---|
 | Express API + `/api/v1` | Not started | |
-| MikroORM + MariaDB setup, base entity/repo | Not started | |
+| Drizzle ORM + MariaDB setup, base repository, `src/db/schema/` | Not started | |
+| Redis | Not started | jobs queue, distance cache, feature-flag cache |
 | Auth middleware | Not started | |
-| Request validation | Not started | library undecided |
+| Ownership-check pattern | Not started | service-layer, per resource |
+| Request validation | Not started | Zod |
+| Logging | Not started | pino |
+| Error tracking | Not started | Sentry |
+| Idempotency-key handling | Not started | lookup table + middleware/service check |
 | Health endpoints | Not started | |
 | React frontend | Not started | |
 | Map integration | Not started | provider undecided |

@@ -11,14 +11,18 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 | Booking lifecycle + allocation/release calls | `bookings` (calls storage capacity operations) | build a second capacity implementation |
 | Feasibility filtering | `matching` | move ranking into it |
 | Ranking + persisted deals | `recommendations` | put eligibility rules in it |
-| Dijkstra | `routes` (+ `road-network` data) | implement Dijkstra elsewhere |
+| Routing (distance/duration) | `routes`, via its provider interface (`01` §Routing) | call a routing vendor SDK from another module |
 | Cost formulas | `costs` | recompute transport cost in `matching` |
 | Persisted notifications + Socket.IO delivery | `notifications` | other modules emit events, they don't deliver |
 | Authentication mechanism | `auth` + middleware | re-implement it in business modules (domain-specific authorization checks are fine) |
+| Resource-ownership checks | Owning module's service layer (e.g. `storages` checks facility ownership) | assume role alone is sufficient |
+| Scheduled/background work (TTL sweep, retention pruning, async delivery) | `jobs` | run cleanup or delivery inline inside a request handler |
+| Feature-flag evaluation and precedence | `feature-flags` | re-implement precedence logic (user > provider > role > global) in another module |
+| Custom-role definition, assignment, and protected-system-role enforcement | `feature-flags` | edit/delete a system role (`farmer`/`provider`/`admin`) or unassign a user's structural role via any endpoint |
 
 ## Dependency direction
 ```text
-Route → Controller → Service → Repository → Entity → MariaDB
+Route → Controller → Service → Repository → Schema (Drizzle) → MariaDB
 ```
 - Each layer may depend only on the next one down.
 - Business logic must not depend on frontend code.
