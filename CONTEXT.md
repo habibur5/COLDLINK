@@ -29,12 +29,36 @@ A named, admin-defined collection of permissions. The name carries no authority;
 _Avoid_: system role, structural role, account type, user type
 
 **Permission**:
-An authorization rule (ALLOW or DENY) deciding whether a user may perform one operation. Any applicable DENY wins; with no applicable ALLOW, access is denied.
-_Avoid_: feature flag, role
+An atomic, named capability to perform one operation on one resource, attached to a role or a user as an ALLOW or a DENY. Any applicable DENY wins; with no applicable ALLOW, access is denied.
+_Avoid_: feature flag, role, capability
+
+**Permission key**:
+A permission's name: `<resource>.<action>`, lowercase kebab-case. Actions are `create`, `read`, `update`, `delete`, or a business verb (`approve`, `cancel`, `verify`, `suspend`, `reinstate`, `refund`, `waive`, `settle`, `resolve`, `assign`, `export`); `<resource>.*` is the resource wildcard. There is no global wildcard.
+_Avoid_: permission string, role name
+
+**Party**:
+A user with a stake in a record - its owner or a counterparty. Many records have several parties: a booking has the farmer, the storage provider and the transport provider.
+_Avoid_: owner, when a counterparty is meant
+
+**Own scope / any scope**:
+A permission's reach. Without `.any` it covers only records the caller is a party to; with `.any` it also covers records they are not. There is no implicit bypass - cross-party access must be granted explicitly and is auditable.
+_Avoid_: admin bypass, superuser
+
+**Effective permission set**:
+The permissions a user actually holds for a request, resolved from role membership and user-level assignments. Any DENY wins; otherwise any ALLOW; otherwise denied.
+_Avoid_: role permissions, role rights
+
+**Permission catalog**:
+The fixed, seeded, versioned list of every permission key. It grows only through migrations, and new keys are never granted automatically.
+_Avoid_: permission list
+
+**Baseline role**:
+The seeded, admin-editable role granted automatically at registration. It holds ordinary capabilities only - no administrative, provider-approval or settlement authority.
+_Avoid_: default role, system role, account type
 
 **Authorization resolution**:
-The single centralized mechanism that evaluates a user's effective permissions across role membership and user-level assignments. No module decides access on its own.
-_Avoid_: role check, per-module permission check
+The single centralized mechanism that evaluates a user's effective permissions across role membership and user-level assignments, server-side on every request. No module decides access on its own, and access tokens carry identity only.
+_Avoid_: role check, per-module permission check, token claims
 
 **Platform Admin**:
 A user holding the permissions needed to administer the platform. It is not a built-in role or account type.
@@ -195,19 +219,27 @@ An amount stored as an integer number of poisha (BDT minor units). All arithmeti
 _Avoid_: float amount, decimal balance
 
 **Payment**:
-The farmer's settlement of a booking total to ColdLink, taken after all components are approved. ColdLink holds the funds.
+The farmer's settlement of a booking total, taken after all components are approved. Funds are collected, held and settled by a licensed payment partner — never by ColdLink itself.
 _Avoid_: transaction, charge
 
 **Payment provider**:
 An interchangeable external service that moves money, behind a single abstraction. Replaceable by configuration.
 _Avoid_: gateway, vendor
 
+**Licensed payment partner**:
+An appropriately licensed Bangladesh entity (a PSO or a bank) through which ColdLink collects, holds and settles funds. ColdLink owns the workflow and the ledger; the partner custodies the money.
+_Avoid_: payment gateway, escrow vendor
+
+**Trust Cum Settlement Account (TCSA)**:
+The Bangladesh Bank-approved account, held by the licensed payment partner, in which collected funds are kept separate from partner and platform money.
+_Avoid_: escrow account, holding account
+
 **Refund**:
 Money returned to a farmer, either through the payment provider or manually by an admin. Recorded as a new entry, never by editing an earlier one.
 _Avoid_: reversal-as-edit, chargeback
 
 **Ledger**:
-ColdLink's authoritative, append-only record of financial transactions. External evidence is used only for reconciliation.
+ColdLink's authoritative, append-only record of financial events, kept consistent with and reconciled against the licensed payment partner's and gateways' records.
 _Avoid_: transactions table
 
 **Ledger entry**:
@@ -217,6 +249,10 @@ _Avoid_: edit, update
 **Provider ledger**:
 The per-provider record of earnings, balances, settlements and adjustments.
 _Avoid_: wallet, account
+
+**Reconciliation**:
+Matching ColdLink's ledger against the licensed payment partner's and gateways' records so collections, installments, refunds, settlements and balances agree.
+_Avoid_: sync, import
 
 **Pending balance**:
 A provider's earned amount not yet eligible for settlement.
@@ -231,7 +267,7 @@ ColdLink's share of a booking, recorded separately from each provider's payable.
 _Avoid_: fee (ambiguous with payment-provider fee), cut
 
 **Settlement**:
-Payment of an eligible provider balance to that provider.
+Payment of an eligible provider balance to that provider, executed by the licensed payment partner on ColdLink's instruction.
 _Avoid_: payout, disbursement
 
 **Settlement hold period**:
@@ -253,7 +289,7 @@ Deferred background work — dunning, notices, sweeps, settlement runs — that 
 _Avoid_: cron, task runner
 
 **Audit log**:
-The append-only record of privileged actions: actor, action, target, previous and new values, timestamp, reason.
+The append-only record of privileged actions: actor, action, target, previous and new values, timestamp, reason. A reason is mandatory when a DENY is granted or a record is deleted.
 _Avoid_: history, activity log
 
 **Notification**:
@@ -273,6 +309,15 @@ Removed. A user has no fixed kind. The `users.role` enum, its `farmer | provider
 
 **Provider service area**:
 Superseded by **vehicle service area**. A service area belongs to a vehicle, never to a provider.
+
+**ColdLink as fund custodian**:
+Removed. The platform never holds customer or provider money. Collection, holding and settlement happen at a licensed payment partner under an authorized arrangement; ColdLink records and instructs.
+
+**Global wildcard permission, and provider- or platform-level permission scopes**:
+Removed. There is no global `*`; the **Platform Admin** holds every curated key explicitly. Permissions attach only to **roles** and to users - never to providers and never as a global scope.
+
+**Implicit administrative ownership bypass**:
+Removed. Cross-party access is always an explicit `.any` **permission**, enforced in the service layer.
 
 **Feature-flag override precedence (user > provider > role > global, role-only-grants)**:
 Superseded. **Feature flags** (availability) and **permissions** (authorization) are separate and both must pass. Permission resolution is: any DENY wins, else any ALLOW, else deny.
