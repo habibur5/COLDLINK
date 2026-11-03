@@ -65,8 +65,8 @@ A user holding the permissions needed to administer the platform. It is not a bu
 _Avoid_: superuser type, inherent admin role
 
 **Feature flag**:
-A platform-wide on/off switch for a feature, managed by the Platform Admin. Independent of permissions: using a feature requires the flag to be enabled *and* the user authorized.
-_Avoid_: permission, entitlement
+A switch controlling the availability of a major platform feature or operational workflow, managed by the Platform Admin. It does not gate ordinary CRUD actions or replace permissions: an operation requires the relevant feature to be enabled *and* the user authorized. Provider-scoped availability applies to a user's provider-side workflows but grants no service capability, approval, permission, verification or eligibility.
+_Avoid_: permission, entitlement, CRUD gate
 
 **Platform setting**:
 A configurable policy value — a deadline, fee, rate or threshold — owned by the Platform Admin. Its effective value is captured when a process begins, so later changes do not alter running processes.
