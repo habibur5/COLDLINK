@@ -21,7 +21,7 @@ A type of service a user is authorized and approved to offer (cold storage, tran
 _Avoid_: provider type, service role
 
 **Service application**:
-A user's submission requesting approval to offer one or more service types. Submitted once per user at onboarding; adding a service type later goes through Platform Support, not self-service.
+A user's initial submission requesting approval to offer one or more service types. Each requested capability is decided independently; a later capability addition is a separate, support-mediated request linked to the original history.
 _Avoid_: registration, provider signup
 
 **Role**:
@@ -75,15 +75,19 @@ _Avoid_: constant, hardcoded config
 ### Trust and verification
 
 **Provider verification**:
-The admin review deciding whether a user's submitted service offerings may become publicly available. Until approved, they are invisible and excluded from matching.
+The evidence review deciding whether a user may offer each requested service capability. Approval activates only that capability; it does not by itself make any facility or vehicle publicly available.
 _Avoid_: service application, onboarding
 
+**Resource verification**:
+The evidence review for one specific facility or vehicle. A resource is not listed, matched, or booked until it passes verification, independently of the user's approved service capability.
+_Avoid_: provider verification, capability approval
+
 **Verified provider**:
-A user whose service offerings have passed provider verification and may participate in the marketplace.
+A user whose service capability has passed Provider verification. The user may offer that capability, but each facility or vehicle still needs its own Resource verification before marketplace participation.
 _Avoid_: approved provider (ambiguous with booking approval)
 
 **Service suspension**:
-Disabling one specific service or resource (for example a single vehicle) without affecting the user's other services.
+An authorized staff action disabling one specific service or resource (for example a single vehicle) without affecting the user's other services. It is distinct from a provider changing ordinary availability.
 _Avoid_: account suspension
 
 **Account suspension**:
