@@ -2,6 +2,11 @@
 
 ```text
 ColdLink/
+├── package.json      Root repository scripts and lint/format tooling
+├── package-lock.json npm dependency lockfile
+├── eslint.config.mjs ESLint flat configuration
+├── .prettierrc.json  Prettier configuration
+├── .prettierignore   Prettier exclusions
 ├── frontend/          React + TypeScript (internal structure undecided)
 ├── backend/
 │   └── src/
@@ -17,6 +22,8 @@ ColdLink/
 │       └── shared/
 └── .ai/               AI-development docs (this folder)
 ```
+
+The root npm package owns repository lint/format tooling. Backend runtime dependencies and application scripts are established by INF-02, not this root scaffold.
 
 ## Module template
 Use only the files a module actually needs. Do not create empty or speculative files.

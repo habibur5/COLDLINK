@@ -38,7 +38,7 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 ## Infrastructure
 | Item | Status | Notes |
 |---|---|---|
-| Repository scaffold, folder structure, lint/format (INF-01) | Not started | `backend/` exists, but no package manifest, source files, or lint setup found |
+| Repository scaffold, folder structure, lint/format (INF-01) | Done | Root npm tooling and ESLint/Prettier config; backend source root scaffolded |
 | Backend base: Express + TypeScript + Drizzle + MariaDB (INF-02) | Not started | Depends on INF-01; `backend/src` is empty |
 | Express API + `/api/v1` | Not started | |
 | Drizzle ORM + MariaDB setup, base repository, `src/db/schema/` | Not started | |

@@ -58,6 +58,11 @@ Validate all incoming data (registration, requests, crop/quantity, storage confi
 ## Dependencies
 Before adding one: confirm the stack or existing code cannot do it, and that it does not change the architecture — **and get explicit approval first**; do not add a dependency unilaterally. Approved so far: Zod (validation), pino (logging), Sentry (error tracking), Redis + BullMQ (jobs/cache), plus the base stack in `00`. Never treat an undecided technology as selected.
 
+## Linting and formatting
+- Repository tooling uses npm scripts at the root, ESLint flat config with the recommended `typescript-eslint` rules, and Prettier.
+- Run `npm run lint` and `npm run format:check`; `npm run format` applies formatting to supported source/config files.
+- Prettier uses its default style with LF line endings unless a more specific project decision is recorded.
+
 ## Refactoring
 Preserve module boundaries, API contracts, business rules and terminology. Do not add layers or features while refactoring.
 
@@ -65,4 +70,4 @@ Preserve module boundaries, API contracts, business rules and terminology. Do no
 Eligibility, capacity availability, transport matching, route calculation, cost calculation, ranking, booking state changes, capacity allocation/release, overbooking prevention.
 
 ## Undecided
-Variable/function/constant casing; import order; path aliases vs relative imports; max function length/params; DTO naming and structure; auth/authz libraries; password-hashing tech; token format; env var names and config library; testing framework; ESLint/Prettier config; dependency injection.
+Variable/function/constant casing; import order; path aliases vs relative imports; max function length/params; DTO naming and structure; auth/authz libraries; password-hashing tech; token format; env var names and config library; testing framework; dependency injection.
