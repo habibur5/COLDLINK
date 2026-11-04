@@ -375,3 +375,15 @@ Every issue — whether created by a person or by AI on someone's behalf — mus
 - `INF-05` (CI) and `INF-07` (Zod/OpenAPI conventions) have very high slack (~42–45 days) — they don't block anything downstream in this graph, but skipping them isn't free; do them early anyway, cheaply, in parallel with `INF-02`.
 - This schedule doesn't resource-level (it doesn't check whether your actual team has enough people to run every parallel branch at once) — if your team is smaller than assumed, non-critical tasks will start consuming their slack, which is fine up to the point a task's slack hits zero.
 - If any critical-path task's real duration exceeds its `TE`, the whole project slips by the same amount — these 14 tasks are the ones worth a status check-in more often than the rest.
+
+## 8. Approved addition: payment sandbox integration (#19)
+
+The original WBS/PERT/CPM baseline predates the approved Payment module and does not include #19; do not treat its task count, estimates, or critical path as covering this work. The approved execution order is:
+
+1. Verify `INF-01` complete (repository scaffold, folder structure, lint/format).
+2. Verify `INF-02` complete (Express + TypeScript + Drizzle + MariaDB backend base; depends on `INF-01`).
+3. Implement the Payment module, durable payment-attempt persistence, authenticated initiation/callback handling, idempotency, and sandbox-only configuration.
+4. Implement bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout adapters.
+5. Complete automated tests and successful/failed sandbox roundtrips for both providers.
+
+No estimate or CPM impact is assigned here; re-estimate if maintaining the original project schedule becomes necessary. INF-01 and INF-02 are schedule entries, not separate GitHub issues. Their completion must be verified from the actual repository before #19 implementation begins.

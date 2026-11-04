@@ -95,7 +95,7 @@ Disabling a user's access, across all their services, for a configurable period.
 _Avoid_: service suspension, ban
 
 **Dispute**:
-A challenge to one completed service component, raised during that component's dispute window. It freezes future payout for that component only.
+A challenge to one service component that has reached its completion milestone. The farmer may raise it during the component's dispute window; authorized Support may raise it on the farmer's behalf at any time. It holds only that component's unpaid provider payable. A late dispute does not undo an already reached Completed state.
 _Avoid_: complaint, claim
 
 ### Supply
@@ -177,11 +177,11 @@ The point at which the stored goods are actually handed back to the farmer. Stor
 _Avoid_: completed, released
 
 **Completed**:
-Reached only after a component's dispute window passes without an unresolved dispute. Distinct from returned.
+Reached after a component's dispute window passes without an unresolved dispute filed during that window. Distinct from Returned; a Support-filed late dispute does not undo this state.
 _Avoid_: returned, done
 
 **Dispute window**:
-The configurable period after a component reaches its completion milestone during which a dispute may be raised. Its duration is captured per component when the window starts.
+The configurable period after a component reaches its completion milestone during which the farmer may raise a dispute. It defaults to seven calendar days and is captured per component when the window starts. An unresolved dispute filed in the window delays Completed until it is resolved.
 _Avoid_: cooling-off period, grace period
 
 **Deemed return**:
@@ -225,6 +225,18 @@ _Avoid_: float amount, decimal balance
 **Payment**:
 The farmer's settlement of a booking total, taken after all components are approved. Funds are collected, held and settled by a licensed payment partner — never by ColdLink itself.
 _Avoid_: transaction, charge
+
+**Payment attempt**:
+A recorded attempt to pay a booking through a payment provider. Its status describes only that attempt; it does not itself settle funds or change a booking's lifecycle state.
+_Avoid_: payment session, settlement
+
+**Payment sandbox**:
+A payment provider's isolated test environment. Sandbox activity does not move real money, establish production approval, or prove that the same flow is available for live transactions.
+_Avoid_: production mode, live payment
+
+**Production payment processing**:
+A provider-approved live environment in which transactions can move real money. It is distinct from sandbox testing and is not enabled by sandbox integration work.
+_Avoid_: sandbox, test transaction
 
 **Payment provider**:
 An interchangeable external service that moves money, behind a single abstraction. Replaceable by configuration.

@@ -28,6 +28,7 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 | routes | Not started | provider-abstracted, default OSRM (`01` §Routing) |
 | costs | Not started | |
 | bookings | Not started | |
+| payments | Not started | #19 approved sandbox-only scope; implementation is gated on INF-01 and INF-02 completion |
 | notifications | Not started | includes Socket.IO |
 | reviews | Not started | optional |
 | admin | Not started | v1 scope undecided |
@@ -37,6 +38,8 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 ## Infrastructure
 | Item | Status | Notes |
 |---|---|---|
+| Repository scaffold, folder structure, lint/format (INF-01) | Not started | `backend/` exists, but no package manifest, source files, or lint setup found |
+| Backend base: Express + TypeScript + Drizzle + MariaDB (INF-02) | Not started | Depends on INF-01; `backend/src` is empty |
 | Express API + `/api/v1` | Not started | |
 | Drizzle ORM + MariaDB setup, base repository, `src/db/schema/` | Not started | |
 | Redis | Not started | jobs queue, distance cache, feature-flag cache |

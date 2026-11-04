@@ -44,6 +44,7 @@ Follow the architecture in `01`. Do not redesign it while implementing a feature
 ## Secrets
 - Every required env var is listed in a single root `.env.example` (values blank/placeholder).
 - Secrets are never committed. Local dev uses `.env` (gitignored); production uses environment variables or a secrets manager/vault — never a committed file.
+- For #19, only sandbox credentials and sandbox endpoints may be configured. Keep sandbox and production configuration separate; do not load production credentials or provide a production fallback. Never persist provider credentials, access tokens, PINs, or OTPs.
 
 ## Deletion policy
 - No `DELETE` that removes a row for any entity a booking can reference (users, providers, facilities, vehicles, crops, etc.). Every such "delete" endpoint sets an existing status field (`inactive`, `suspended`, etc.) instead. See `10` §Integrity rules for which entities this applies to.

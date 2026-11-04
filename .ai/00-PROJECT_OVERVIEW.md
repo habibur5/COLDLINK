@@ -93,12 +93,12 @@ total_cost     = storage_cost + transport_cost
 | Routing | Provider-abstracted (interface in `routes`; default provider self-hosted OSRM on an OSM Bangladesh extract — no cost, no billing account needed; Google Maps Directions API pluggable via the same interface — **10,000 free requests/month** since Google retired the old $200/month credit in March 2025, ~$5/1k after that; needs a Google Cloud billing account + card even within the free tier. See `01` §Routing). Distance results are cached in Redis per facility↔location pair. |
 | Maps (display) | Leaflet+OSM and/or Google Maps Platform (see Undecided) |
 
-## Out of scope (v1) — but designed not to block later
-Not built now, but the architecture must not make these hard to add:
+## Deferred and excluded capabilities (v1)
+The following live/extended capabilities are deferred or excluded; the sandbox-only work explicitly approved in #19 is in scope. Keep deferred capabilities easy to add later without enabling them now:
 
 | Deferred | Why deferred now | What keeps it easy later |
 |---|---|---|
-| Payments (bKash/Nagad, not Stripe — cards aren't the norm for BD farmers/providers) | No payment gateway selected | `bookings.total_cost` and the booking state machine are payment-agnostic; a `payments` table can attach to `bookings` without touching booking logic |
+| Production payment processing | Deferred; no production provider is selected or approved | #19 implements sandbox-only bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout behind the Payment module; the Payment module and adapters do not change booking lifecycle transitions |
 | SMS notifications | Not in v1 scope | `notifications` module is channel-agnostic; Socket.IO is one delivery channel among others, add an SMS channel without redesign |
 | Multi-currency | Planned for later, not v1 | Don't hardcode currency formatting; a `currency` column can be added to price fields without restructuring them |
 | Multi-language (Bangla + others) | Planned for later, not v1 | Don't hardcode English-only strings for user-facing catalog data (e.g. crop names) |

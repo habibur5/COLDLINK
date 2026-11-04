@@ -41,20 +41,22 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 | `routes` | Distance/duration via the routing-provider interface (§Routing below) |
 | `costs` | Storage, transport, total cost |
 | `bookings` | Booking lifecycle, capacity reserve/allocate/release |
+| `payments` | Payment attempts, authenticated initiation, provider callback/return/IPN handling, and authoritative payment verification; no booking-state transitions, ledger, wallet, refund, installment, payout, or settlement ownership |
 | `notifications` | Persisted notifications + Socket.IO delivery |
 | `reviews` | Ratings (optional module) |
 | `admin` | Admin management and monitoring |
 | `jobs` | Scheduled/background work: booking TTL sweep, retention pruning, async notification delivery, rating recalculation (§Background Jobs below) |
 | `feature-flags` | Centralized flag evaluation, precedence, and custom-role management — the only place this logic lives (§Feature Flags, §Roles below) |
 
-Not modules: `payments` (out of scope), `service-types` (replaced by `service_requests.service_type` enum and provider-owned rows).
+`payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. No production provider is selected or approved. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
 
 ## Module interaction
 ```text
 service-requests → matching ─┬→ storages / storage-availability
                              └→ vehicles / transport-options
-                  → routes → costs → recommendations → bookings → notifications
+                   → routes → costs → recommendations → bookings → notifications
 ```
+The `payments` module is independent of booking lifecycle transitions, ledger, wallet, and marketplace behavior. A verified sandbox payment attempt does not transition a booking.
 
 ## Recommendation pipeline (`POST /recommendations`)
 ```text

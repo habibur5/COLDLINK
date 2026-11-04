@@ -9,6 +9,8 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 |---|---|---|
 | Capacity rules (available/reserved/occupied) | `storages`, `storage-availability` | duplicate them in `bookings` or `matching` |
 | Booking lifecycle + allocation/release calls | `bookings` (calls storage capacity operations) | build a second capacity implementation |
+| Payment attempt lifecycle, initiation, callback processing, and provider verification | `payments` | change booking lifecycle, ledger, wallet, refund, installment, payout, or settlement behavior from a provider adapter |
+| Provider protocol and HTTP/API details | The respective adapter under `payments/providers/` | leak provider-specific payloads or status rules into callers or other modules |
 | Feasibility filtering | `matching` | move ranking into it |
 | Ranking + persisted deals | `recommendations` | put eligibility rules in it |
 | Routing (distance/duration) | `routes`, via its provider interface (`01` §Routing) | call a routing vendor SDK from another module |

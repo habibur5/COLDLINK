@@ -1,6 +1,6 @@
 # ColdLink — Database Schema (updated)
 
-Source of truth for data. MariaDB (InnoDB, utf8mb4), accessed through Drizzle ORM. **26 tables** (25 from the previous schema + `auth_tokens`), **37 foreign keys**.
+Source of truth for data. MariaDB (InnoDB, utf8mb4), accessed through Drizzle ORM. This schema predates #19's approved Payment module and payment-attempt persistence; table and foreign-key counts are not final until those requirements are incorporated.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions
@@ -231,7 +231,18 @@ idempotency_keys                                 -- survive a retried create req
   status ENUM(processing,completed) default processing  -- [NEW] stops two simultaneous retries both running
   response_status INT NULL · response_body JSON NULL  -- [CHANGED] now nullable: empty while processing
   created_at · expires_at DATETIME                    -- retention configurable, not hardcoded
+
+payment_attempts                                 -- #19; sandbox provider attempts
+  id CHAR(36) PK · merchant_reference · provider ENUM(bkash,sslcommerz)
+  provider_reference NULL · amount BIGINT          -- integer poisha, never decimal/floating point
+  currency · status · relevant timestamps
+  -- No credentials, access tokens, PINs, OTPs, or unnecessary raw callback payloads.
+  -- Enforce appropriate uniqueness for merchant/provider references and idempotent initiation.
+  -- Exact ownership relationship/FK, column lengths, timestamp fields, status enum, and indexes
+  -- are finalized during implementation; callbacks never update booking lifecycle state.
 ```
+
+The approved minimum persisted data for #19 is merchant reference, provider reference, amount, currency, provider, status, and relevant timestamps. Payment-attempt ownership must be verifiable for authenticated initiation and callback correlation; determine its relation to existing records without making the Payment module an owner of booking transitions or ledger behavior.
 
 ---
 
