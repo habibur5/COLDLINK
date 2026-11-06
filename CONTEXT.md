@@ -271,23 +271,23 @@ Matching ColdLink's ledger against the licensed payment partner's and gateways' 
 _Avoid_: sync, import
 
 **Pending balance**:
-A provider's earned amount not yet eligible for settlement.
+A provider amount attributable to installments ColdLink has actually collected, but which is not yet approved for transfer to Available balance. It is non-withdrawable; unpaid installments are not included. Service completion, verification, applicable holds and required admin approval govern whether it can advance.
 _Avoid_: immature balance
 
 **Available balance**:
-A provider's amount whose hold period has passed and which is eligible to settle.
+A provider amount backed by collected funds that has satisfied service-completion, verification and applicable hold requirements, and has been approved by an authorized admin. It is eligible for a provider withdrawal request; transfer still depends on the licensed payment partner's confirmed capabilities.
 _Avoid_: withdrawable balance
 
 **Platform commission**:
-ColdLink's share of a booking, recorded separately from each provider's payable.
+ColdLink's centrally managed percentage share of a provider's agreed service price, configurable per provider and service. Specific negotiated exceptions are explicitly recorded. Taxes, gateway fees and other pass-through charges are excluded. The applicable rate is snapshotted when the booking price is agreed; commission is earned and recorded only when the provider becomes settlement-eligible, separately from collected funds and provider balances.
 _Avoid_: fee (ambiguous with payment-provider fee), cut
 
 **Settlement**:
-Payment of an eligible provider balance to that provider, executed by the licensed payment partner on ColdLink's instruction.
+Transfer of an admin-approved Available balance to a provider, executed by the licensed payment partner on ColdLink's instruction after a provider withdrawal request. Schedule, minimum threshold and methods are configurable/conditional on confirmed partner capability; none is assumed in advance.
 _Avoid_: payout, disbursement
 
 **Settlement hold period**:
-The configurable delay after a component's completion before its earnings become available.
+The admin-configurable delay after a component is completed and verified before its collected provider share may be approved for availability. The default duration remains pending the refund and provider-penalty policy in #5. An applicable refund or dispute can hold the affected amount.
 _Avoid_: settlement delay
 
 **Provider penalty**:

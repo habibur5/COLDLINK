@@ -64,6 +64,12 @@ total_cost     = storage_cost + transport_cost
 **Deletion policy**
 - No hard deletes on anything a booking can reference (users, providers, facilities, vehicles, crops). Every "delete" endpoint flips a status field to `inactive`/`suspended`/etc. instead of removing the row (`06`, `10` §Integrity rules).
 
+**Commission and provider settlement** (`CONTEXT.md`, ADR-0008)
+- ColdLink owns the workflow and append-only ledger; the licensed payment partner holds funds in the TCSA and executes approved settlements.
+- Provider/service commission is a centrally managed percentage, snapshotted at booking price agreement and earned only at settlement eligibility. It excludes taxes, gateway fees and pass-through charges.
+- Collected installment shares enter non-withdrawable Pending balance. Completion, verification, applicable hold clearance and mandatory admin approval are required before funds move to Available balance. Unpaid installments remain receivables; ColdLink does not advance funds.
+- Provider withdrawals require an admin-approved request. Schedule, threshold and method remain configurable or partner-dependent; the default hold duration awaits #5.
+
 **Authorization**
 - Role checks alone are not sufficient. Every write to a provider-owned resource (facility, vehicle, its bookings) must verify in the service layer that the acting user actually owns that resource, not just that their role is `provider`.
 

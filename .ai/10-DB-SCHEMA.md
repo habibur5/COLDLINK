@@ -1,6 +1,6 @@
 # ColdLink — Database Schema (updated)
 
-Source of truth for data. MariaDB (InnoDB, utf8mb4), modeled with Prisma ORM 7's MySQL connector. This schema predates #19's approved Payment module and payment-attempt persistence; table and foreign-key counts are not final until those requirements are incorporated. Prisma-specific model mappings and migration conventions are in `04`.
+Source of truth for data. MariaDB (InnoDB, utf8mb4), modeled with Prisma ORM 7's MySQL connector. This schema predates #19's approved Payment module and payment-attempt persistence and #4's settled commission/provider-settlement policy; table and foreign-key counts are not final until those requirements are incorporated. The ledger must distinguish collected funds, provider Pending/Available balances, earned commission, settlements and outstanding receivables; see ADR-0008. Prisma-specific model mappings and migration conventions are in `04`.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions
