@@ -24,7 +24,7 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 
 ## Dependency direction
 ```text
-Route → Controller → Service → Repository → Schema (Drizzle) → MariaDB
+Route → Controller → Service → Repository → Prisma Client → Prisma schema → MariaDB
 ```
 - Each layer may depend only on the next one down.
 - Business logic must not depend on frontend code.

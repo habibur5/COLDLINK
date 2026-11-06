@@ -39,9 +39,9 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 | Item | Status | Notes |
 |---|---|---|
 | Repository scaffold, folder structure, lint/format (INF-01) | Done | Root npm tooling and ESLint/Prettier config; backend source root scaffolded |
-| Backend base: Express + TypeScript + Drizzle + MariaDB (INF-02) | Not started | Depends on INF-01; `backend/src` is empty |
+| Backend base: Express + TypeScript + Prisma ORM 7 + MariaDB (INF-02) | Not started | Depends on INF-01; `backend/src` is empty |
 | Express API + `/api/v1` | Not started | |
-| Drizzle ORM + MariaDB setup, base repository, `src/db/schema/` | Not started | |
+| Prisma ORM 7 + MariaDB setup, Prisma Client singleton and schema | Not started | |
 | Redis | Not started | jobs queue, distance cache, feature-flag cache |
 | Auth middleware | Not started | |
 | Ownership-check pattern | Not started | service-layer, per resource |

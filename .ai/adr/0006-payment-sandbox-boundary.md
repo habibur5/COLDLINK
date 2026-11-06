@@ -16,7 +16,7 @@ ColdLink needs sandbox payment integrations for two provider protocols without c
 5. The Payment module and adapters remain independent of bookings, ledger, wallet, and marketplace modules. A verified attempt never changes booking lifecycle state under #19.
 6. Keep sandbox and production configuration strictly separate. #19 loads sandbox credentials/endpoints only; no live transactions, production credentials, production fallback, or production provider selection/approval.
 7. Require automated adapter/callback/idempotency/isolation tests and successful and failed roundtrips against both provider sandboxes before closing #19. If credentials or callback access are unavailable, document the limitation and keep #19 open.
-8. Do not start implementation until INF-01 (repository scaffold, folder structure, lint/format) and INF-02 (Express, TypeScript, Drizzle, MariaDB base) are verified complete. INF-02 depends on INF-01. Do not add a test dependency without approval.
+8. Do not start implementation until INF-01 (repository scaffold, folder structure, lint/format) and INF-02 (Express, TypeScript, Prisma ORM 7, MariaDB base) are verified complete. INF-02 depends on INF-01. Do not add a test dependency without approval.
 
 ## Consequences
 

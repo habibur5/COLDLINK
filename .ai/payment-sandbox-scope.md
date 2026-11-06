@@ -118,7 +118,7 @@ created → verification_pending (ambiguous create response)
 ## Implementation gate and order
 
 1. Verify **INF-01** complete: repo scaffold, folder structure, lint/format.
-2. Verify **INF-02** complete: Express + TypeScript + Drizzle + MariaDB backend base, depending on INF-01.
+2. Verify **INF-02** complete: Express + TypeScript + Prisma ORM 7 + MariaDB backend base, depending on INF-01.
 3. Inspect the established tooling from INF-01/INF-02; do not add a test dependency without approval. Add the Payment module, schema/migration, routes, configuration, and adapters within the approved boundaries.
 4. Implement bKash adapter, then SSLCommerz adapter (or parallelize after the shared interface/config is fixed).
 5. Pass automated tests and both successful/failed sandbox roundtrips before closing #19.

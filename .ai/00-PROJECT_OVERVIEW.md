@@ -2,7 +2,7 @@
 
 Web marketplace where farmers find, compare, rank and book **cold storage** and **agricultural transport**. It solves an information/coordination gap, not a physical storage shortage. Bangladesh-focused, built as a portfolio/CV project with a real path to becoming a startup — architecture favors extendability over shortcuts.
 
-**Doc map:** 00 product rules · 01 architecture + modules · 02 folders · 03 code · 04 Drizzle ORM · 05 API · 06 module rules · 07 git · 08 AI rules · 09 progress · 10 DB schema (source of truth for data) · 11 project schedule (WBS, PERT/CPM, Gantt, GitHub issue conventions).
+**Doc map:** 00 product rules · 01 architecture + modules · 02 folders · 03 code · 04 Prisma ORM · 05 API · 06 module rules · 07 git · 08 AI rules · 09 progress · 10 DB schema (source of truth for data) · 11 project schedule (WBS, PERT/CPM, Gantt, GitHub issue conventions).
 **Undecided items** are listed at the end of each doc. Never invent them: follow existing code, else ask.
 
 ## Actors
@@ -82,7 +82,7 @@ total_cost     = storage_cost + transport_cost
 | Area | Decision |
 |---|---|
 | Frontend | React, TypeScript, Axios, Tailwind CSS, Socket.IO client |
-| Backend | Node.js, Express, TypeScript, **Drizzle ORM** (latest) + `mysql2` driver, Socket.IO |
+| Backend | Node.js, Express, TypeScript, **Prisma ORM 7** + MariaDB driver adapter, Socket.IO |
 | Database | **MariaDB** (InnoDB, utf8mb4) |
 | Cache / jobs infra | **Redis** — backs the job queue (BullMQ), the routing distance cache, and feature-flag caching |
 | Background jobs | **BullMQ** (Redis-backed) — TTL sweep, notification delivery, rating recalculation, retention pruning (`01` §Background Jobs) |

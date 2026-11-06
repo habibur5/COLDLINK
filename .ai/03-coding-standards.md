@@ -4,7 +4,7 @@ Follow the architecture in `01`. Do not redesign it while implementing a feature
 
 ## TypeScript
 - Backend and frontend are TypeScript.
-- Prefer explicit domain types; keep types aligned with the schema in `10`. Do not duplicate one domain concept in competing types.
+- Prefer explicit domain types; keep types aligned with the data contract in `10` and Prisma models in `04`. Reuse generated Prisma types for persistence shapes; do not duplicate one domain concept in competing types.
 - Avoid `any`. Do not use type assertions just to silence an error you do not understand.
 - `interface` or `type` are both fine; pick what fits the contract.
 

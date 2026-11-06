@@ -11,7 +11,7 @@ Each module in `01` is broken into one schedulable task, split by track. Where a
 | Phase | Track | ID | Task | Depends on |
 |---|---|---|---|---|
 | 0 — Setup | Shared | `INF-01` | Repo scaffold, folder structure, lint/format | — |
-| 0 | Shared | `INF-02` | Backend base: Express + TS + Drizzle + MariaDB connection | `INF-01` |
+| 0 | Shared | `INF-02` | Backend base: Express + TS + Prisma ORM 7 + MariaDB connection | `INF-01` |
 | 0 | Shared | `INF-03` | Redis + BullMQ base job runner | `INF-01` |
 | 0 | Shared | `INF-04` | Auth middleware groundwork (JWT, password hashing) | `INF-02` |
 | 0 | Shared | `INF-05` | CI pipeline (lint/test/build on push) | `INF-01` |
@@ -381,7 +381,7 @@ Every issue — whether created by a person or by AI on someone's behalf — mus
 The original WBS/PERT/CPM baseline predates the approved Payment module and does not include #19; do not treat its task count, estimates, or critical path as covering this work. The approved execution order is:
 
 1. Verify `INF-01` complete (repository scaffold, folder structure, lint/format).
-2. Verify `INF-02` complete (Express + TypeScript + Drizzle + MariaDB backend base; depends on `INF-01`).
+2. Verify `INF-02` complete (Express + TypeScript + Prisma ORM 7 + MariaDB backend base; depends on `INF-01`).
 3. Implement the Payment module, durable payment-attempt persistence, authenticated initiation/callback handling, idempotency, and sandbox-only configuration.
 4. Implement bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout adapters.
 5. Complete automated tests and successful/failed sandbox roundtrips for both providers.

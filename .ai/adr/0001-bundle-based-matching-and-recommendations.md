@@ -2,7 +2,7 @@
 
 **Status:** Accepted (MVP scope) — **decision point 6 (service radius) superseded by [ADR-0002](0002-per-vehicle-service-area.md).** Everything else in this ADR (points 1–5, 7–9) stands unchanged.
 **Date context:** decided across a single extended design session before any code existed
-**Doc convention established here:** ADRs live in `.ai/adr/`, one file per decision, numbered sequentially (`0001`, `0002`, ...). Each ADR is self-contained — it should make sense to someone who has read `01`/`10` but wasn't in the room for the discussion. This is the first one; earlier major decisions (Drizzle over other ORMs, no-hard-delete policy, roles precedence) predate this convention and are candidates for backfill ADRs later, not yet written.
+**Doc convention established here:** ADRs live in `.ai/adr/`, one file per decision, numbered sequentially (`0001`, `0002`, ...). Each ADR is self-contained — it should make sense to someone who has read `01`/`10` but wasn't in the room for the discussion. Earlier decisions predate this convention and are candidates for backfill ADRs; the ORM choice is now recorded in ADR-0007.
 
 ## Context
 

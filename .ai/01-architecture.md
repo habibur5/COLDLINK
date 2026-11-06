@@ -2,7 +2,7 @@
 
 ## Tiers
 ```text
-React (presentation) ── REST + Socket.IO ──▶ Node/Express/TS/Drizzle ORM (application) ──▶ MariaDB (data)
+React (presentation) ── REST + Socket.IO ──▶ Node/Express/TS/Prisma ORM (application) ──▶ MariaDB (data)
                                                           │
                                                           └──▶ Redis (jobs queue, distance cache, flag cache)
 ```
@@ -11,15 +11,15 @@ React (presentation) ── REST + Socket.IO ──▶ Node/Express/TS/Drizzle O
 
 ## Backend request flow
 ```text
-Router → Controller → Service → Repository → Schema (Drizzle) → MariaDB
+Router → Controller → Service → Repository → Prisma Client → Prisma schema → MariaDB
 ```
 | Layer | Responsibility | Must NOT |
 |---|---|---|
 | Router | HTTP method/path, attach middleware | contain business or DB logic |
 | Controller | Parse request, call service, return response | hold business rules |
 | Service | Business rules, orchestration, transactions | touch HTTP req/res objects |
-| Repository | Persistence/queries via Drizzle (base repo + per-module repo, details: `04`) | decide ranking, eligibility, cost, booking policy |
-| Schema | Drizzle table definitions + inferred TS types (no entity classes, no decorators, details: `04`) | hold any logic |
+| Repository | Persistence/queries via Prisma Client (per-module repository, details: `04`) | decide ranking, eligibility, cost, booking policy |
+| Prisma schema | Data models, relations, mappings, and generated client types (details: `04`) | hold business logic |
 | DTO | API input/output contract (Zod schema) | hold business logic |
 
 Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see `06`).
@@ -89,7 +89,7 @@ routes/
 ```text
 Request → validate (Zod) → check Idempotency-Key (§Idempotency)
 → ONE DB transaction with row locking:
-    sum overlapping reserved|occupied + new quantity ≤ max_capacity_for_crop ?
+    lock the facility_crop_configs row; sum overlapping reserved|occupied + new quantity ≤ max_capacity_for_crop ?
     insert allocation(status=reserved) → create booking + child rows (price snapshots)
   (violation → 409 Conflict, nothing written)
 → notify provider(s) (queued via jobs, not inline)
@@ -97,7 +97,7 @@ Provider approve → child approved | reject → allocation cancelled/released
 Both children approved → booking confirmed → active → completed
 No response within TTL (default 24h, configurable) → jobs sweep expires booking + releases allocation
 ```
-MariaDB has no exclusion constraints, so overlap checks are enforced in the service layer.
+MariaDB has no exclusion constraints, so overlap checks are enforced in the service layer. Prisma does not expose `SELECT ... FOR UPDATE` as a model-query option; the owning repository must use a parameterized raw query within the same interactive transaction to lock the `facility_crop_configs` row before checking capacity.
 
 ## Authorization (ownership checks)
 Role checks alone (`role = provider`) are not sufficient. Every write to a resource a provider owns — a facility, a vehicle, a booking's storage/transport child — must verify in the **service layer** that the authenticated user is the actual owner of that specific resource, not merely that their role permits the action in general. Skipping this is an IDOR vulnerability. This check lives alongside the business logic in each module's service, not in shared middleware alone (middleware handles authentication/role; ownership is resource-specific).
