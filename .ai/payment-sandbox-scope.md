@@ -123,4 +123,4 @@ created → verification_pending (ambiguous create response)
 4. Implement bKash adapter, then SSLCommerz adapter (or parallelize after the shared interface/config is fixed).
 5. Pass automated tests and both successful/failed sandbox roundtrips before closing #19.
 
-At the last repository inspection, INF-01 and INF-02 were not complete: `backend/src` was empty; no package manifest, application source, or test setup was present. They have no separate GitHub issues. **Do not start #19 implementation until both are verified complete.**
+INF-01 and INF-02 are separate from #19 and are schedule entries, not GitHub issues. **Do not start #19 implementation until both are verified complete.**

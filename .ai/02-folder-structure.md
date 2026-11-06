@@ -7,8 +7,11 @@ ColdLink/
 ├── eslint.config.mjs ESLint flat configuration
 ├── .prettierrc.json  Prettier configuration
 ├── .prettierignore   Prettier exclusions
+├── .env.example      Canonical environment-variable example
 ├── frontend/          React + TypeScript (internal structure undecided)
 ├── backend/
+│   ├── package.json       Backend runtime and Prisma scripts
+│   ├── tsconfig.json      Backend TypeScript configuration
 │   ├── prisma.config.ts  Prisma CLI configuration
 │   ├── prisma/
 │   │   ├── schema.prisma  database models and relations (details: `04`)
@@ -26,7 +29,7 @@ ColdLink/
 └── .ai/               AI-development docs (this folder)
 ```
 
-The root npm package owns repository lint/format tooling. Backend runtime dependencies and application scripts are established by INF-02, not this root scaffold.
+The root npm package owns repository lint/format tooling and `.env.example` is the canonical environment example. The backend npm package owns runtime dependencies and backend scripts. Generated Prisma Client output is created under `backend/src/generated/prisma/` and is not hand-edited or committed.
 
 ## Module template
 Use only the files a module actually needs. Do not create empty or speculative files.

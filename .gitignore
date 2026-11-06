@@ -27,6 +27,7 @@ TestResults.xml
 # Node.js repository tooling
 **/node_modules/
 **/dist/
+backend/src/generated/
 coverage/
 *.tsbuildinfo
 npm-debug.log*
