@@ -37,6 +37,6 @@ The system calculates eligible refund amounts from policy and service progress. 
 
 ## Consequences
 
-- Issue #5 remains open until its Academic MVP acceptance criteria are implemented: persisted records, validated policy transitions, audit history, tests, and simulated outcomes.
+- Issue #5 is closed as the policy decision; its Academic MVP implementation acceptance criteria—persisted records, validated policy transitions, audit history, tests, and simulated outcomes—are tracked in child issue #22.
 - Penalty rates, provider-specific exceptions, reduction percentages, repeated-cancellation thresholds/windows, appeal deadlines, and active transport milestone templates are policy configuration. No penalty or reduction is applied when its rate is unset.
 - These policies do not enable production payment/refund processing or actual provider settlement.
