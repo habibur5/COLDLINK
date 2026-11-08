@@ -39,7 +39,7 @@ Sandbox payments (#19) remain restricted to bKash Tokenized Checkout and SSLComm
 - refund and provider-penalty decisions with simulated outcomes;
 - simulated provider withdrawal/settlement lifecycle;
 - dispute-resolution enhancements and financial consequences;
-- other retained future features, including localization/reviews/overstay policy as selected in the approved scope.
+- other retained future features, including reviews/overstay policy as selected in the approved scope. Localization is excluded from V1; Bangla requires a separately approved feature (ADR-0010).
 
 No academic workflow may issue a live payment, refund, custody instruction, payout or settlement.
 

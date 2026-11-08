@@ -75,7 +75,7 @@ user_roles                                       -- additive, many-to-many; a us
 ```text
 crops
   id CHAR(36) PK · name VARCHAR(100) UNIQUE
-  name_bn VARCHAR(100) NULL                      -- [OPTIONAL] Bangla name (multi-language planned, 00)
+  name_bn VARCHAR(100) NULL                      -- [DEFERRED] Bangla localization is outside V1; see ADR-0010
   category VARCHAR(100) NULL
   status ENUM(active,inactive) · created_at
 
@@ -381,7 +381,7 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 | S4 | Should | `feature_flag_overrides` | CHECK that role-scope rows have `enabled = 1` |
 | S5 | Should | all `DATETIME` | Store UTC; convert in the UI |
 | S6 | Should | several | Data-integrity CHECKs (§5b) |
-| O1 | Optional | `crops` | `name_bn` |
+| O1 | Deferred | `crops` | `name_bn` — outside V1 per ADR-0010 |
 | O2 | Optional | `bookings` | `expires_at` |
 | O3 | Optional | `storage_bookings`, `transportation_bookings` | `rejection_reason` |
 
