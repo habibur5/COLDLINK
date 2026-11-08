@@ -20,6 +20,7 @@ The frontend calls high-level operations; it does not orchestrate internal algor
 | routes | `POST /routes/shortest` `/routes/to-storage` · `GET /bookings/:bookingId/route` |
 | costs | `POST /costs/storage` `/costs/transport` `/costs/calculate` |
 | bookings | `GET /bookings/mine` `/bookings/history` `/bookings/:bookingId` `/bookings/:bookingId/status` · `POST /bookings` (requires `Idempotency-Key`) · `PATCH /bookings/:bookingId` · `POST /bookings/:bookingId/approve` `reject` `confirm` `activate` `complete` `cancel` |
+| installments / extensions / overstay | `GET /bookings/:bookingId/installments` · `POST /bookings/:bookingId/installments/:installmentId/collect` `waive` `waive-deposit` · `GET /bookings/:bookingId/overstay` · `POST /bookings/:bookingId/overstay/confirm-deemed-return` · `POST /bookings/:bookingId/extend` · `GET /bookings/:bookingId/extensions` · `POST /bookings/:bookingId/extensions/:extensionId/approve` `reject` `cancel` |
 | payments | Authenticated payment initiation plus provider-specific callback/return/IPN endpoints; exact paths and request/response contracts are defined during #19 implementation |
 | notifications | `GET /notifications` |
 | feature-flags | `GET /admin/feature-flags` · `PATCH /admin/feature-flags/:flagKey` (global default) · `PUT /admin/feature-flags/:flagKey/overrides/:scope/:scopeId` `DELETE .../overrides/:scope/:scopeId` (`scope` = `role`\|`provider`\|`user`; `scopeId` is a `role_key` when `scope=role`, a `userId` otherwise) |
@@ -37,6 +38,7 @@ Do not invent endpoints outside this table or the current task. Action verbs (`a
 - Booking lifecycle: `requested → approved|rejected → confirmed → active → completed`, plus `cancelled` and `expired` (TTL sweep, `01` §Background Jobs).
 - `POST /bookings` requires an `Idempotency-Key` header; a repeated key returns the original response (`01` §Idempotency).
 - #19 payment initiation is authenticated and idempotent. Provider callback/return/IPN endpoints verify provider state and payment-attempt references; browser redirects alone are never payment confirmation. Payment callbacks do not transition booking state.
+- The ADR-0010 collection endpoints record deterministic academic simulations; they do not initiate a payment-provider checkout. Capacity is rechecked transactionally on extension approval, and deemed return requires `overstay.confirm.any`.
 - Business errors are enforced in the backend (unsupported crop, no capacity, unavailable period, no suitable vehicle, invalid state transition, capacity conflict, ownership violation, disabled feature).
 
 ## Contract preservation (when touching an existing endpoint)

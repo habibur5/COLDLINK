@@ -29,7 +29,7 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 | costs | Not started | |
 | bookings | Not started | |
 | payments | Not started | Production-grade sandbox-only checkout; INF-01/02 complete; no live transactions |
-| installments / refunds / ledger / commission / settlements | Not started | Academic-grade persisted workflows; external operations simulated |
+| installments / refunds / ledger / commission / settlements | Not started | Academic-grade persisted workflows; external operations simulated. Installment, overstay, and extension policy accepted in ADR-0010; implementation is #23. |
 | notifications | Not started | includes Socket.IO |
 | reviews | Not started | optional |
 | admin | Not started | v1 scope undecided |

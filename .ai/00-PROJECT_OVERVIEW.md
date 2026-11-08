@@ -22,7 +22,7 @@ ColdLink is a Bangladesh-focused marketplace where farmers compare and book cold
 ## Payment and finance boundary
 
 - Supported checkout integrations: bKash one-time Tokenized Checkout Sandbox and SSLCommerz Hosted Checkout Sandbox. Persist attempts, verify with authoritative provider APIs, enforce idempotency, and never let callbacks alone confirm success.
-- Installments may be represented as scheduled academic obligations and collected through repeated sandbox attempts or a simulator. No recurring agreement or live debit.
+- Storage installments, overstay, and extension workflows follow ADR-0010: persisted academic obligations and deterministic simulated collection only. No recurring agreement, live debit, invoice, or financial enforcement beyond cancelling an unpaid required initial deposit.
 - Refund, commission, ledger, dispute-finance and settlement concepts may have persisted academic records and simulated state transitions. ColdLink never holds funds, initiates live refunds, issues payouts, or settles real money.
 - No production payment integration, live transaction, Hold.bd/partner engagement, real custody, payout, settlement, or production refund processing.
 
@@ -40,4 +40,4 @@ AI/ML recommendations, weather prediction, live GPS tracking, blockchain, multi-
 - `.ai/11-project-schedule.md`: sequential Waterfall phase plan and gates.
 - `.ai/09-feature-progress.md`: code-inspected implementation status.
 - `.ai/10-DB-SCHEMA.md`: data-model reference; update it before schema implementation.
-- `.ai/adr/`: accepted architecture decisions; ADR-0006 and ADR-0008 include the updated scope boundary.
+- `.ai/adr/`: accepted architecture decisions; ADR-0006, ADR-0008, and ADR-0010 include the financial scope boundaries.

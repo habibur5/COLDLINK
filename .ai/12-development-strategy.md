@@ -56,7 +56,7 @@ Every retained open issue has exactly one grade label: `grade:production` or `gr
 | #1 decision map | Production planning | Indexes both grades; completed decisions remain historical |
 | #4 commission/settlement policy | Academic | Calculate/persist/simulate only; no actual settlement |
 | #5 refund/penalty policy | Academic | Policy and simulated outcomes; no provider refund execution |
-| #6 installments/overstay/extensions | Academic | Persisted schedules and simulated collection |
+| #6 policy / #23 implementation: installments/overstay/extensions | Academic | ADR-0010: persisted schedules, deterministic simulated collection, and no live recurring debit |
 | #11 admin console | Production core + academic panels | RBAC, verification, core operations production; financial/dispute enhancements academic |
 | #12 localization | Academic | V1 is English-only per ADR-0010; Bangla and localization infrastructure are deferred to a separately approved feature |
 | #13 sessions/contact verification | Production core | Secure auth/session behavior |

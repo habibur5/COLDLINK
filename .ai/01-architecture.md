@@ -49,7 +49,7 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 | `jobs` | Scheduled/background work: booking TTL sweep, retention pruning, async notification delivery, rating recalculation (§Background Jobs below) |
 | `feature-flags` | Centralized flag evaluation, precedence, and custom-role management — the only place this logic lives (§Feature Flags, §Roles below) |
 
-`payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is strictly sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. Academic installments may create multiple sandbox attempts or simulated collection records; no recurring agreement or live debit. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
+`payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is strictly sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. ADR-0010 installment collection is a deterministic academic simulation, not a recurring agreement or payment-provider attempt. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
 
 ## Module interaction
 ```text
@@ -57,7 +57,7 @@ service-requests → matching ─┬→ storages / storage-availability
                              └→ vehicles / transport-options
                    → routes → costs → recommendations → bookings → notifications
 ```
-The `payments` module is independent of booking lifecycle transitions and academic financial records. A verified sandbox attempt does not itself transition booking or ledger state.
+The `payments` module is independent of booking lifecycle transitions and academic financial records. A verified sandbox attempt does not itself transition booking or ledger state. `installments` owns schedules, simulated collections, extensions, and overstay records under ADR-0010; `bookings` continues to own booking/component state and capacity allocation changes.
 
 ## Recommendation pipeline (`POST /recommendations`)
 ```text
@@ -112,6 +112,7 @@ Redis + BullMQ. Nothing that can fail independently (a push notification, a clea
 | Notification pruning | Scheduled (daily) | Purge `notifications` older than a configurable retention window (default 90 days) |
 | Notification delivery | Enqueued on creation | Persist first, then push via Socket.IO asynchronously — delivery failure never fails the triggering request |
 | Rating recalculation | Enqueued on new review | Recompute `provider_profiles.average_rating`/`total_reviews` |
+| Installment/overstay sweep | Scheduled (daily) | Mark installments due/overdue, create notices, accrue active overstay, and flag deemed-return eligibility; it never auto-confirms deemed return or collects money |
 
 `booking_status_history` has no pruning job for now — retained indefinitely; an archive strategy is deferred, not designed yet.
 All retention windows and the TTL duration are read from config/env — never hardcoded in job code.

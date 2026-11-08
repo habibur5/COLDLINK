@@ -34,7 +34,7 @@ Sandbox payments (#19) remain restricted to bKash Tokenized Checkout and SSLComm
 
 **Goal:** implement retained non-core features with functional business logic, persistence, validation and tests where applicable:
 
-- installment plans and simulated/sandbox collection;
+- installment plans, overstay/extensions, and simulated collection (#23; policy in ADR-0010);
 - persisted provider ledger, commission snapshots, pending/available modeled balances;
 - refund and provider-penalty decisions with simulated outcomes;
 - simulated provider withdrawal/settlement lifecycle;
@@ -58,6 +58,6 @@ No academic workflow may issue a live payment, refund, custody instruction, payo
 ## Dependency and status rules
 
 - Work proceeds phase-by-phase; a change to a baselined requirement returns to Phase 0/1 review before implementation.
-- GitHub issue dependencies must reflect actual prerequisite work. #19 no longer waits on completed INF-01/INF-02. #15 core state-machine decisions can depend on academic #5/#6/#8 only for modeled financial transitions; financial implementation stays in Phase 3.
+- GitHub issue dependencies must reflect actual prerequisite work. #19 no longer waits on completed INF-01/INF-02. #15 core state-machine decisions can depend on academic policy decisions #5/#6/#8 only for modeled financial transitions; financial implementation stays in Phase 3. Issue #6's implementation is #23.
 - Track code-inspected progress in `.ai/09-feature-progress.md`; issue state is not evidence of implementation completion.
 - Preserve estimates and existing issue discussion as history; do not use the prior parallel Critical Path/PERT/Gantt as the governing delivery model.

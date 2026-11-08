@@ -193,16 +193,20 @@ A component state indicating a provider's share may enter settlement processing,
 _Avoid_: returned, completed
 
 **Overstay fee**:
-A per-day charge accruing when goods remain uncollected after the agreed storage period.
+A per-day academic charge accruing when goods remain uncollected after the agreed storage period. Its rate is snapshotted when overstay starts; it stops at actual return or deemed return.
 _Avoid_: late fee, penalty
 
 **Installment**:
-A scheduled part-payment for storage covering a future service period, with cadence set by the provider and overridable by the Platform Admin.
+A scheduled academic part-payment for storage covering a future service period, with cadence set by the provider and overridable by the Platform Admin. A down payment is a distinct initial schedule item, not a regular installment.
 _Avoid_: payment plan, schedule
 
 **Initial response window**:
 The configurable time a provider has to approve or reject a request before it times out.
 _Avoid_: approval timeout
+
+**Extension request**:
+A farmer's request to move a storage booking's agreed end date later. It requires capacity revalidation and provider approval; it is distinct from overstay.
+_Avoid_: automatic extension
 
 **Replacement window**:
 The configurable time ColdLink may spend finding and securing a replacement provider for a slot.

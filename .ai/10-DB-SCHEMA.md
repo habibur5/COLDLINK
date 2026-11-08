@@ -2,7 +2,7 @@
 
 # ColdLink — Database Schema (updated)
 
-Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADR-0003 and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
+Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADR-0003 and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions
@@ -55,6 +55,12 @@ provider_profiles                                -- 1:1 with users
   provider_status ENUM(pending_verification,verified,suspended)
   average_rating DECIMAL(3,2) NULL         -- cached, recomputed on new review
   total_reviews INT default 0              -- cached
+  installment_cadence ENUM(weekly,biweekly,monthly,per_storage_period,custom) default per_storage_period
+  installment_cadence_custom_days INT NULL -- required only when cadence = custom; minimum 7
+  admin_cadence_override ENUM(weekly,biweekly,monthly,per_storage_period,custom) NULL
+  admin_cadence_override_custom_days INT NULL
+  down_payment_pct DECIMAL(5,2) NULL       -- provider preference; NULL = global default
+  admin_down_payment_override_pct DECIMAL(5,2) NULL
   created_at · updated_at
 
 roles                                            -- both system-protected and admin-created custom roles
@@ -165,6 +171,11 @@ storage_bookings                                 -- present iff booking_type ∈
   facility_crop_config_id FK→facility_crop_configs.id
   quantity DECIMAL(10,2) · start_date DATE · end_date DATE
   price_per_unit_snapshot DECIMAL(10,2) · total_storage_cost DECIMAL(10,2)
+  installment_cadence_snapshot ENUM(weekly,biweekly,monthly,per_storage_period,custom) NULL
+  installment_cadence_custom_days_snapshot INT NULL
+  down_payment_pct_snapshot DECIMAL(5,2) NULL
+  installment_grace_days_snapshot INT NULL
+  collection_notice_lead_days_snapshot INT NULL
   status ENUM(pending,approved,rejected,active,completed,cancelled)
   rejection_reason VARCHAR(255) NULL              -- [OPTIONAL]
   created_at · updated_at
@@ -242,6 +253,39 @@ payment_attempts                                 -- #19; sandbox provider attemp
   -- Enforce appropriate uniqueness for merchant/provider references and idempotent initiation.
   -- Exact ownership relationship/FK, column lengths, timestamp fields, status enum, and indexes
   -- are finalized during implementation; callbacks never update booking lifecycle state.
+
+platform_settings                                -- global policy values; values take effect only for new snapshots
+  setting_key VARCHAR(100) PK · value_json JSON · updated_by FK→users.id NULL · updated_at
+  -- ADR-0010 keys: installment.default_cadence, installment.grace_days,
+  -- installment.default_down_payment_pct, storage.overstay_multiplier,
+  -- storage.deemed_return_active_days, storage.collection_notice_lead_days
+
+storage_installments                             -- ADR-0010; academic storage-only obligations
+  id CHAR(36) PK · storage_booking_id FK→storage_bookings.id
+  installment_number INT · kind ENUM(down_payment,regular,extension)
+  period_start DATE NULL · period_end DATE NULL · due_date DATE
+  amount BIGINT                                  -- poisha
+  status ENUM(scheduled,due,paid,overdue,waived)
+  paid_at DATETIME NULL · collected_by FK→users.id NULL
+  waived_at DATETIME NULL · waived_by FK→users.id NULL · waive_reason VARCHAR(255) NULL
+  created_at · updated_at · UNIQUE(storage_booking_id, installment_number)
+
+booking_extension_requests                       -- one pending request per storage booking, service-enforced
+  id CHAR(36) PK · storage_booking_id FK→storage_bookings.id
+  farmer_id FK→farmer_profiles.user_id · requested_end_date DATE
+  additional_cost BIGINT                         -- poisha; original booking rate × additional duration
+  status ENUM(pending,approved,rejected,cancelled,expired)
+  provider_response_reason VARCHAR(255) NULL · responded_at DATETIME NULL
+  expires_at DATETIME · created_at · updated_at
+
+overstay_records                                 -- one record per storage booking
+  id CHAR(36) PK · storage_booking_id FK→storage_bookings.id UNIQUE
+  start_date DATE · end_date DATE NULL
+  rate_per_day_snapshot BIGINT · multiplier_snapshot DECIMAL(5,2)
+  deemed_return_threshold_days_snapshot INT
+  days_elapsed INT default 0 · total_accrued BIGINT default 0
+  status ENUM(active,finalized) · finalized_by FK→users.id NULL · finalized_at DATETIME NULL
+  created_at · updated_at
 ```
 
 The approved minimum persisted data for #19 is merchant reference, provider reference, amount, currency, provider, status, and relevant timestamps. Payment-attempt ownership must be verifiable for authenticated initiation and callback correlation; determine its relation to existing records without making the Payment module an owner of booking transitions or ledger behavior.
@@ -289,6 +333,14 @@ The approved minimum persisted data for #19 is merchant reference, provider refe
 | 35 | `user_roles.role_key` | `roles.role_key` | many-to-one | NO |
 | 36 | `auth_tokens.user_id` | `users.id` | many-to-one | NO |
 | 37 | `idempotency_keys.user_id` | `users.id` | many-to-one | NO |
+| 38 | `platform_settings.updated_by` | `users.id` | many-to-one | YES |
+| 39 | `storage_installments.storage_booking_id` | `storage_bookings.id` | many-to-one | NO |
+| 40 | `storage_installments.collected_by` | `users.id` | many-to-one | YES |
+| 41 | `storage_installments.waived_by` | `users.id` | many-to-one | YES |
+| 42 | `booking_extension_requests.storage_booking_id` | `storage_bookings.id` | many-to-one | NO |
+| 43 | `booking_extension_requests.farmer_id` | `farmer_profiles.user_id` | many-to-one | NO |
+| 44 | `overstay_records.storage_booking_id` | `storage_bookings.id` | one-to-one | NO |
+| 45 | `overstay_records.finalized_by` | `users.id` | many-to-one | YES |
 
 **Logical references (no DB FK):** `booking_status_history.entity_id` (→ `bookings` / `storage_bookings` / `transportation_bookings` by `entity_type`), `notifications.related_entity_id`, `admin_action_logs.target_entity_id`, `feature_flag_overrides.scope_id` (→ `roles.role_key` / `provider_profiles.user_id` / `users.id` by `scope`).
 
@@ -339,6 +391,12 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `feature_flag_overrides` | `uq_ffo_flag_scope` | `flag_key, scope, scope_id` | yes | One override per target |
 | `feature_flag_overrides` | `idx_ffo_scope` | `scope, scope_id` | no | Load overrides for a user/provider/role `[NEW]` |
 | `idempotency_keys` | `idx_idem_expires` | `expires_at` | no | Retention pruning `[NEW]` |
+| `storage_installments` | `uq_si_booking_number` | `storage_booking_id, installment_number` | yes | Stable schedule order |
+| `storage_installments` | `idx_si_due_status` | `status, due_date` | no | Daily due/overdue sweep |
+| `booking_extension_requests` | `idx_ber_pending_expiry` | `status, expires_at` | no | Pending-request expiry sweep |
+| `booking_extension_requests` | `idx_ber_storage_created` | `storage_booking_id, created_at` | no | Booking extension history |
+| `overstay_records` | `uq_or_storage_booking` | `storage_booking_id` | yes | One overstay record per storage booking |
+| `overstay_records` | `idx_or_active` | `status, start_date` | no | Daily overstay and eligibility sweep |
 | `user_roles` | `idx_user_roles_role` | `role_key` | no | Users holding a role `[NEW]` |
 
 ## 5b. Constraints
@@ -361,6 +419,10 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `vehicles` | CHECK | `capacity > 0 AND base_charge >= 0 AND cost_per_km >= 0` | `[SHOULD]` |
 | `provider_service_areas` | CHECK | `radius_km > 0` | `[SHOULD]` |
 | `bookings` | CHECK | `total_cost >= 0` | `[SHOULD]` |
+| `provider_profiles` | CHECK | custom cadence has `installment_cadence_custom_days >= 7`; override custom cadence has `admin_cadence_override_custom_days >= 7`; percentage fields are between 0 and 100 | `[NEW]` |
+| `storage_installments` | CHECK | `amount >= 0`; `kind='down_payment'` has no service period; `waive_reason` is present when status is `waived` | `[NEW]` |
+| `booking_extension_requests` | Service rule | only one `pending` row per storage booking; MariaDB has no portable partial unique index | `[NEW]` |
+| `overstay_records` | CHECK | `rate_per_day_snapshot >= 0`, `multiplier_snapshot >= 0`, `days_elapsed >= 0`, `total_accrued >= 0` | `[NEW]` |
 
 Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` from 10.2.
 
