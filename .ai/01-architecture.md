@@ -41,14 +41,15 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 | `routes` | Distance/duration via the routing-provider interface (§Routing below) |
 | `costs` | Storage, transport, total cost |
 | `bookings` | Booking lifecycle, capacity reserve/allocate/release |
-| `payments` | Payment attempts, authenticated initiation, provider callback/return/IPN handling, and authoritative payment verification; no booking-state transitions, ledger, wallet, refund, installment, payout, or settlement ownership |
+| `payments` | Sandbox payment attempts, authenticated initiation, provider callbacks, and authoritative verification; no live money movement |
+| `installments`, `refunds`, `ledger`, `commission`, `settlements`, `disputes` | Academic-grade persisted business workflows; external financial actions are simulated and isolated from checkout adapters |
 | `notifications` | Persisted notifications + Socket.IO delivery |
 | `reviews` | Ratings (optional module) |
 | `admin` | Admin management and monitoring |
 | `jobs` | Scheduled/background work: booking TTL sweep, retention pruning, async notification delivery, rating recalculation (§Background Jobs below) |
 | `feature-flags` | Centralized flag evaluation, precedence, and custom-role management — the only place this logic lives (§Feature Flags, §Roles below) |
 
-`payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. No production provider is selected or approved. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
+`payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is strictly sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. Academic installments may create multiple sandbox attempts or simulated collection records; no recurring agreement or live debit. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
 
 ## Module interaction
 ```text
@@ -56,7 +57,7 @@ service-requests → matching ─┬→ storages / storage-availability
                              └→ vehicles / transport-options
                    → routes → costs → recommendations → bookings → notifications
 ```
-The `payments` module is independent of booking lifecycle transitions, ledger, wallet, and marketplace behavior. A verified sandbox payment attempt does not transition a booking.
+The `payments` module is independent of booking lifecycle transitions and academic financial records. A verified sandbox attempt does not itself transition booking or ledger state.
 
 ## Recommendation pipeline (`POST /recommendations`)
 ```text
@@ -100,7 +101,7 @@ No response within TTL (default 24h, configurable) → jobs sweep expires bookin
 MariaDB has no exclusion constraints, so overlap checks are enforced in the service layer. Prisma does not expose `SELECT ... FOR UPDATE` as a model-query option; the owning repository must use a parameterized raw query within the same interactive transaction to lock the `facility_crop_configs` row before checking capacity.
 
 ## Authorization (ownership checks)
-Role checks alone (`role = provider`) are not sufficient. Every write to a resource a provider owns — a facility, a vehicle, a booking's storage/transport child — must verify in the **service layer** that the authenticated user is the actual owner of that specific resource, not merely that their role permits the action in general. Skipping this is an IDOR vulnerability. This check lives alongside the business logic in each module's service, not in shared middleware alone (middleware handles authentication/role; ownership is resource-specific).
+Permission checks alone are not sufficient. Every write to a provider-owned resource must verify in the service layer that the authenticated user is the owner or a party to that record. Authorization follows ADR-0003; ownership, lifecycle, verification, and business invariants are independently enforced. Skipping these checks is an IDOR vulnerability.
 
 ## Background jobs (`jobs` module)
 Redis + BullMQ. Nothing that can fail independently (a push notification, a cleanup sweep) may block or fail the request that triggered it — it's queued, not run inline.
@@ -118,42 +119,17 @@ All retention windows and the TTL duration are read from config/env — never ha
 ## Idempotency
 `POST /bookings` (and other create-endpoints as they're added) require an `Idempotency-Key` header. On first use, the request is processed and the response stored keyed by that value. A retry with the same key returns the stored response rather than creating a duplicate — this exists because transaction row-locking prevents *overbooking*, not *duplicate submission* from a network retry. Backed by a small lookup table (`10`).
 
-## Feature flags (`feature-flags` module)
-Flat, named flags (e.g. `reviews.enabled`, `booking.create`) can gate a whole module or a specific action. Backed by `feature_flags` (global default) + `feature_flag_overrides` (per-role, per-provider, or per-user), cached in Redis.
-- **Precedence, most specific wins:** `user override > provider override > role override > global default`. A user, provider, or role override can turn a feature back **on** even if the global default is off.
-- **Role overrides only ever grant.** A role override row is always `enabled=true`. Because a user can hold multiple roles (§Roles below) and grants are additive, a role-level "deny" would be ambiguous the moment a second role grants the same flag — so denying one specific user something their role(s) would otherwise grant is done with a **user-level** override (`enabled=false`), which sits above role in precedence.
-- **Enforcement is server-side**, in the service layer (or shared middleware calling the `feature-flags` service) — return `403` for a disabled action. The frontend may additionally hide/disable UI for UX, but that is never the enforcement point. Disabling a flag is never a structural change (routes stay registered) — it's purely an access check.
-- **Centralized only**: all modules call the `feature-flags` service to evaluate a flag; no module implements its own precedence logic.
+## Authorization and feature flags
 
-**Evaluation algorithm** (exact order, stop at the first match):
-```text
-resolve(flagKey, user):
-  1. a feature_flag_overrides row exists for scope=user,  scope_id=user.id      → use its `enabled` value, STOP
-  2. user.role == 'provider' AND
-     a feature_flag_overrides row exists for scope=provider, scope_id=user.id  → use its `enabled` value, STOP
-  3. ANY of the user's assigned roles (from user_roles, §Roles) has a
-     feature_flag_overrides row for scope=role, scope_id=<that role_key>,
-     with enabled=true                                                        → true, STOP
-  4. otherwise                                                                → feature_flags.global_enabled
-```
+Authorization follows ADR-0003, not legacy role-based rules: permissions use `resource.action`; default deny; any applicable DENY wins; roles are permission bundles, and user-level assignments are the only other source. Resolution is server-side on every request with version-invalidated caching; tokens carry identity only. `.own` means party to the record and `.any` grants explicit cross-party access. The state machine and service layer independently enforce lifecycle, ownership, verification, and business rules. Never infer authority from a role name or `users.role`.
 
-## Roles (system-protected + admin-managed custom roles)
-Two kinds of role, kept structurally separate:
-- **System roles** — `farmer`, `provider`, `admin`. These drive real domain behavior (a farmer has `farmer_profiles` and can create `service_requests`; a provider has `provider_profiles` and can own facilities/vehicles). `users.role` (a fixed `ENUM(farmer,provider,admin)`, unchanged from before) is the single source of truth for this — it is **not** replaced or removed by anything below.
-- **Custom roles** — anything admin creates (`support`, `moderator`, `logistics_staff`, ...). These carry **no** domain behavior. Their only purpose is to be a named bundle of feature-flag grants (via `feature_flag_overrides` with `scope=role`).
-
-**Multi-role assignment.** Every user is automatically assigned their structural role as a `user_roles` row the moment their account is created (a farmer gets a `user_roles` row for `role_key='farmer'`, etc.) — this happens in the `auth`/`users` module at registration, not manually. Admin can then assign additional custom roles to any user via `user_roles`. A user's role set is therefore always their one structural role **plus** zero or more custom roles.
-
-**Protection rules (enforced in the `feature-flags` service, not just a DB flag):**
-- A role with `roles.is_system = 1` (`farmer`, `provider`, `admin`) can never be edited, deactivated, or deleted via the admin API — reject with `403`.
-- A `user_roles` row that matches the user's structural `users.role` can never be unassigned independently via the admin API — it is system-managed, not admin-editable one at a time.
-- Admin can freely create, edit, and soft-delete (`status → inactive`, never a hard delete) any custom (`is_system = 0`) role, and freely assign/unassign custom roles to/from any user.
+Feature flags gate feature availability and do not grant permissions. Both flag and permission must allow an operation. Use the accepted v1 catalog, scopes, precedence, audit, and failure behavior in issue #10; the prior user/provider/role precedence described in this document is superseded. Keep flag implementation distinct from permission resolution.
 
 ## Hard constraints
 - Cold storage is the primary domain; transport is optional and integrated.
 - Storage capacity and price are per crop.
 - Ranking is deterministic, not ML.
-- One routing-provider interface (`routes`), one cost implementation (`costs`), one capacity implementation (`storages`/`storage-availability`), one flag+role-evaluation implementation (`feature-flags`). Never call a routing vendor SDK outside `routes`, never re-implement flag/role precedence outside `feature-flags`.
+- One routing-provider interface (`routes`), one cost implementation (`costs`), one capacity implementation (`storages`/`storage-availability`), one feature-flag evaluator and one authorization resolver. Never call a routing vendor SDK outside `routes`, never re-implement flag/role precedence outside `feature-flags`.
 - No hard deletes on anything a booking can reference — every delete endpoint is a status change (`10` §Integrity rules).
 - Socket.IO is separate from REST; it does not replace it.
 - Do not introduce any technology not listed in `00` §Tech stack.

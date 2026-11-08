@@ -1,6 +1,6 @@
 # Payment sandbox integration — approved design for #19
 
-**Status:** Design approved. Implementation is blocked until INF-01 and INF-02 are verified complete. #19 remains open through provider sandbox roundtrip tests.
+**Status:** Design approved. INF-01 and INF-02 are complete; #19 remains open through provider sandbox roundtrip tests. This is production-grade integration work strictly limited to sandbox environments.
 
 ## Scope and boundaries
 
@@ -9,8 +9,8 @@
 - Dedicated `payments` module owns orchestration, durable Payment attempts, authenticated initiation, provider callback/return/IPN routes, idempotency, and authoritative verification.
 - Separate bKash and SSLCommerz adapters own their provider-specific HTTP/API and callback formats under `payments/providers/`.
 - Booking, ledger, wallet, and marketplace modules remain independent. Payment callbacks never transition booking state.
-- No partner outreach; no Hold.bd; no production provider selection/approval; no live transactions or production fallback.
-- Refunds, installments, agreements/recurring payments, payouts, settlement, capture/void products, and production configuration are outside #19.
+- No partner outreach; no Hold.bd; no production provider selection/approval; no live transactions or production fallback. These exclusions apply to all project work.
+- Refunds, installments, agreements/recurring payments, payouts, settlement, capture/void products, and production configuration are outside #19. Installment business workflows are academic-grade and may call a new sandbox payment attempt per installment or simulate collection; they do not expand #19 into live recurring payments.
 
 ## bKash sandbox flow
 
@@ -82,7 +82,7 @@ created → verification_pending (ambiguous create response)
 - Verify merchant reference, provider reference, amount, and currency against the attempt before applying a result.
 - Repeated initiation with the same idempotency key/body returns the same attempt/response; key reuse with a different body is rejected under existing idempotency rules.
 - Duplicate callbacks are safe and cannot produce duplicate successful transitions. Terminal states do not regress.
-- Payment success describes the provider transaction only; it does not transition a booking or create a ledger, payout, or settlement entry.
+- Payment success describes a sandbox provider transaction only; it does not itself transition booking or create academic ledger/settlement entries.
 
 ## Persistence, configuration, and safety
 
@@ -98,7 +98,7 @@ created → verification_pending (ambiguous create response)
 - Provider-specific callback/return/IPN endpoints as required by the selected provider flows; exact paths/contracts are defined during implementation.
 - Validate caller ownership at initiation and correlate all provider callbacks to a persisted attempt.
 - Provider return URLs do not constitute confirmation. Callbacks are verified using Execute/Query for bKash and Order Validation for SSLCommerz.
-- No booking transition, refund, installment, payout, or settlement endpoint is part of #19.
+- No booking transition, refund, installment, payout, or settlement endpoint is part of #19. Academic installment workflows may orchestrate sandbox attempts through the payment boundary; all payout/settlement outcomes are simulated.
 
 ## Acceptance criteria
 

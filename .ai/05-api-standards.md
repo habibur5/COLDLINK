@@ -57,3 +57,6 @@ API docs are generated from Zod schemas (via an OpenAPI generator), not hand-mai
 - Per-endpoint JSON schemas.
 - Socket.IO event names, payloads, connection auth, ack format.
 - Paths not yet defined: notifications (unread, mark read, read-all, delete), crops CRUD/search, storage-crop config (nested under storages), reviews, admin, matching result retrieval, provider-side booking list, user get-by-id/list.
+# Planning status (2026-11-08)
+
+Legacy endpoint examples below include role-based authorization and feature-flag precedence that conflict with ADR-0003 and issue #10. Treat them as historical drafts, not implementation contracts. Before feature implementation, reconcile every route and permission against the accepted server-side permission model. Financial endpoints for refunds, installments, ledger, commission, disputes and settlement are academic-grade; payout/refund/settlement execution is simulated. Payment routes are sandbox-only.

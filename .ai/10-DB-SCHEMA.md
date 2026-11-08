@@ -1,6 +1,8 @@
+> **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation.
+
 # ColdLink — Database Schema (updated)
 
-Source of truth for data. MariaDB (InnoDB, utf8mb4), modeled with Prisma ORM 7's MySQL connector. This schema predates #19's approved Payment module and payment-attempt persistence and #4's settled commission/provider-settlement policy; table and foreign-key counts are not final until those requirements are incorporated. The ledger must distinguish collected funds, provider Pending/Available balances, earned commission, settlements and outstanding receivables; see ADR-0008. Prisma-specific model mappings and migration conventions are in `04`.
+Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADR-0003 and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions

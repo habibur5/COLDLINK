@@ -9,7 +9,7 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 |---|---|---|
 | Capacity rules (available/reserved/occupied) | `storages`, `storage-availability` | duplicate them in `bookings` or `matching` |
 | Booking lifecycle + allocation/release calls | `bookings` (calls storage capacity operations) | build a second capacity implementation |
-| Payment attempt lifecycle, initiation, callback processing, and provider verification | `payments` | change booking lifecycle, ledger, wallet, refund, installment, payout, or settlement behavior from a provider adapter |
+| Sandbox payment attempt lifecycle, initiation, callback processing, and provider verification | `payments` | enable live payment operations or mutate booking/academic finance state from provider adapters |
 | Provider protocol and HTTP/API details | The respective adapter under `payments/providers/` | leak provider-specific payloads or status rules into callers or other modules |
 | Feasibility filtering | `matching` | move ranking into it |
 | Ranking + persisted deals | `recommendations` | put eligibility rules in it |
@@ -19,8 +19,8 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 | Authentication mechanism | `auth` + middleware | re-implement it in business modules (domain-specific authorization checks are fine) |
 | Resource-ownership checks | Owning module's service layer (e.g. `storages` checks facility ownership) | assume role alone is sufficient |
 | Scheduled/background work (TTL sweep, retention pruning, async delivery) | `jobs` | run cleanup or delivery inline inside a request handler |
-| Feature-flag evaluation and precedence | `feature-flags` | re-implement precedence logic (user > provider > role > global) in another module |
-| Custom-role definition, assignment, and protected-system-role enforcement | `feature-flags` | edit/delete a system role (`farmer`/`provider`/`admin`) or unassign a user's structural role via any endpoint |
+| Feature-flag evaluation | `feature-flags` | re-implement flag availability policy in another module |
+| Permission catalog, role assignment, user-level ALLOW/DENY, and resolution | `authorization` | infer authority from role names or feature flags |
 
 ## Dependency direction
 ```text
@@ -47,3 +47,6 @@ Business logic in routes, controllers, repositories or `shared/`; reaching into 
 
 ## Undecided
 Formal new-module approval process; complete module dependency graph beyond the flow in `01`.
+
+
+Feature grades and delivery gates: `.ai/12-development-strategy.md`. Refund, installment, ledger, commission, dispute-finance and settlement workflows are academic-grade; provider-facing external financial actions are simulations only.

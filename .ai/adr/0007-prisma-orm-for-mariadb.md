@@ -14,7 +14,7 @@ Preserve the capacity-safety requirement: the booking transaction must lock the 
 
 ## Consequences
 
-- Replace the Drizzle-specific `04` conventions with Prisma conventions; update architecture, folder layout, progress tracking, schedule, and the payment implementation gate.
+- `04`, architecture, folder layout, progress tracking, and schedule use Prisma conventions. The accepted backend foundation is present; progress is recorded in `09`.
 - The Prisma schema must explicitly map names and MariaDB-native types to avoid unintended schema drift. Required constraints unsupported by Prisma's schema language must be preserved in reviewed migrations.
 - This is a technology choice only: it does not alter domain behavior, database design decisions, module ownership, or API contracts.
 

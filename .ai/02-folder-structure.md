@@ -64,3 +64,6 @@ Frontend structure; contents of `middleware/`, `config/`, `shared/`; which modul
 `jobs` and `feature-flags` (§01) follow the same module template as any other module; `jobs` additionally holds scheduled-job definitions (e.g. a `*.job.ts` file per job) rather than HTTP routes.
 
 `payments` follows the module template. Its orchestration, repository, controller, and routes own payment attempts and callback processing. Provider-specific adapters live under `payments/providers/` and own only provider protocol/HTTP behavior; they do not import booking, ledger, wallet, or marketplace internals.
+# Planning status (2026-11-08)
+
+Some legacy examples below refer to structural roles and a `user_roles`-centric authorization model. ADR-0003 supersedes these: use permission-based authorization, and reconcile schema/module ownership before implementing the corresponding folders. Financial workflow modules are academic-grade; provider adapters remain sandbox-only.

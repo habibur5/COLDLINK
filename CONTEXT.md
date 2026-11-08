@@ -1,6 +1,6 @@
 # ColdLink
 
-ColdLink is a Bangladesh-focused marketplace where farmers find, compare and book cold storage and agricultural transport. This glossary fixes the project's vocabulary. It defines terms only — never implementation, file paths, or column names.
+ColdLink is a Bangladesh-focused marketplace where farmers find, compare and book cold storage and agricultural transport. This glossary fixes the project's vocabulary. It defines terms only — never implementation, file paths, or column names. Delivery follows the Waterfall Model; assurance grades are defined in `.ai/12-development-strategy.md`.
 
 Read this before writing any spec, ADR, or ticket. Terms listed under **Superseded** have been removed and must not reappear.
 
@@ -223,7 +223,7 @@ An amount stored as an integer number of poisha (BDT minor units). All arithmeti
 _Avoid_: float amount, decimal balance
 
 **Payment**:
-The farmer's settlement of a booking total, taken after all components are approved. Funds are collected, held and settled by a licensed payment partner — never by ColdLink itself.
+An academic model of a farmer's booking payment. Provider transactions in project scope are sandbox-only or simulated; no real funds are moved or held.
 _Avoid_: transaction, charge
 
 **Payment attempt**:
@@ -239,23 +239,21 @@ A provider-approved live environment in which transactions can move real money. 
 _Avoid_: sandbox, test transaction
 
 **Payment provider**:
-An interchangeable external service that moves money, behind a single abstraction. Replaceable by configuration.
+An external sandbox service used to demonstrate checkout protocols. Supported adapters are bKash Tokenized Checkout Sandbox and SSLCommerz Hosted Checkout Sandbox; neither enables live payment processing.
 _Avoid_: gateway, vendor
 
 **Licensed payment partner**:
-An appropriately licensed Bangladesh entity (a PSO or a bank) through which ColdLink collects, holds and settles funds. ColdLink owns the workflow and the ledger; the partner custodies the money.
-_Avoid_: payment gateway, escrow vendor
+Removed from the implemented product model. No real-world custody or settlement partner is selected or used.
 
 **Trust Cum Settlement Account (TCSA)**:
-The Bangladesh Bank-approved account, held by the licensed payment partner, in which collected funds are kept separate from partner and platform money.
-_Avoid_: escrow account, holding account
+Historical regulatory concept only; ColdLink does not open, operate, or integrate with a TCSA.
 
 **Refund**:
-Money returned to a farmer, either through the payment provider or manually by an admin. Recorded as a new entry, never by editing an earlier one.
+An academic workflow recording a refund decision and simulated outcome. No production refund is submitted to a payment provider and no real money is returned.
 _Avoid_: reversal-as-edit, chargeback
 
 **Ledger**:
-ColdLink's authoritative, append-only record of financial events, kept consistent with and reconciled against the licensed payment partner's and gateways' records.
+An academic-grade, persisted, append-only model of financial events. It is not a custodial account and is not reconciled with real partner settlement records.
 _Avoid_: transactions table
 
 **Ledger entry**:
@@ -263,27 +261,27 @@ One immutable financial event — payment, earning, commission, installment, pen
 _Avoid_: edit, update
 
 **Provider ledger**:
-The per-provider record of earnings, balances, settlements and adjustments.
+The academic-grade per-provider record of modeled earnings, balances, settlement states, and adjustments; it does not represent held funds.
 _Avoid_: wallet, account
 
 **Reconciliation**:
-Matching ColdLink's ledger against the licensed payment partner's and gateways' records so collections, installments, refunds, settlements and balances agree.
+An academic comparison of simulated payment, refund, and settlement records; it does not imply connection to a real partner or movement of funds.
 _Avoid_: sync, import
 
 **Pending balance**:
-A provider amount attributable to installments ColdLink has actually collected, but which is not yet approved for transfer to Available balance. It is non-withdrawable; unpaid installments are not included. Service completion, verification, applicable holds and required admin approval govern whether it can advance.
+An academic modeled provider amount attributable to simulated or sandbox-collected installment shares, not approved for modeled availability. It is non-withdrawable; it is not a real payable or held money.
 _Avoid_: immature balance
 
 **Available balance**:
-A provider amount backed by collected funds that has satisfied service-completion, verification and applicable hold requirements, and has been approved by an authorized admin. It is eligible for a provider withdrawal request; transfer still depends on the licensed payment partner's confirmed capabilities.
+An academic ledger balance that has passed modeled eligibility and admin approval. It may be used in a simulated withdrawal workflow only; it is not cash or a claim on held funds.
 _Avoid_: withdrawable balance
 
 **Platform commission**:
-ColdLink's centrally managed percentage share of a provider's agreed service price, configurable per provider and service. Specific negotiated exceptions are explicitly recorded. Taxes, gateway fees and other pass-through charges are excluded. The applicable rate is snapshotted when the booking price is agreed; commission is earned and recorded only when the provider becomes settlement-eligible, separately from collected funds and provider balances.
+An academic modeled percentage share of a provider's agreed service price, configurable per provider and service. Specific negotiated exceptions are explicitly recorded. Taxes, gateway fees and other pass-through charges are excluded. The applicable rate is snapshotted when the booking price is agreed; modeled commission is recorded at settlement eligibility and is not a claim on real funds.
 _Avoid_: fee (ambiguous with payment-provider fee), cut
 
 **Settlement**:
-Transfer of an admin-approved Available balance to a provider, executed by the licensed payment partner on ColdLink's instruction after a provider withdrawal request. Schedule, minimum threshold and methods are configurable/conditional on confirmed partner capability; none is assumed in advance.
+An academic state transition representing a modeled provider settlement. No payment instruction is sent and no actual payout occurs.
 _Avoid_: payout, disbursement
 
 **Settlement hold period**:
@@ -301,7 +299,7 @@ _Avoid_: forgiveness
 ### Platform operations
 
 **Job**:
-Deferred background work — dunning, notices, sweeps, settlement runs — that must never block the request that triggered it.
+Deferred background work — notices, expiry sweeps, and academic installment/settlement simulations — that must never block the request that triggered it.
 _Avoid_: cron, task runner
 
 **Audit log**:
@@ -327,7 +325,7 @@ Removed. A user has no fixed kind. The `users.role` enum, its `farmer | provider
 Superseded by **vehicle service area**. A service area belongs to a vehicle, never to a provider.
 
 **ColdLink as fund custodian**:
-Removed. The platform never holds customer or provider money. Collection, holding and settlement happen at a licensed payment partner under an authorized arrangement; ColdLink records and instructs.
+Removed. ColdLink never holds or moves customer or provider money; financial workflows are limited to sandbox checkout and academic simulation.
 
 **Global wildcard permission, and provider- or platform-level permission scopes**:
 Removed. There is no global `*`; the **Platform Admin** holds every curated key explicitly. Permissions attach only to **roles** and to users - never to providers and never as a global scope.

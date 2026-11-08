@@ -63,7 +63,7 @@ Confirmed defaults so far: `matching.max_service_radius_km = 50`, `matching.sync
 - `matching`/`recommendations` becomes the most algorithmically complex module in the system — more so than `routes` or `costs`. Worth budgeting real design/testing time here specifically, and worth the ADR-level "heuristic, not optimal" framing so a future contributor doesn't "fix" this into an expensive exhaustive search.
 - Real-time delivery needs a request-scoped live channel (a Socket.IO room keyed to the `service_request` id), which is a new pattern distinct from the existing per-user notification channel (`01`/`10` §Notifications) — both will coexist.
 - Once a farmer selects a bundle, its child slots become the actual storage/transport slots that feed the provider-acceptance/payment/confirmation lifecycle designed separately (2h/5h/48h windows, 1:N provider attempts per slot) — that lifecycle's own ADR is not yet written, but this bundle-selection step is its entry point.
-- This is not yet reflected in `01`, `05`, `06`, `10`, or `11` — those still have other open decision threads pending consolidation (payment-gateway abstraction, phone/OTP auth, provider verification workflow, i18n scope, ledger/commission structure). This ADR is a decision record ahead of that implementation pass, not a substitute for it.
+- This is an accepted production-core matching decision. Reconcile any remaining schema/API documentation before implementing it. Development follows the Waterfall gates in `.ai/11-project-schedule.md`.
 
 ## Alternatives considered
 

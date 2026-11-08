@@ -1,6 +1,6 @@
 # Feature Progress
 
-**Current state: INF-01 and INF-02 backend foundations are complete; business modules are not implemented.**
+**Current state: INF-01 and INF-02 backend foundations are complete; core business modules are not yet implemented.** Feature grades and Waterfall gates: `.ai/12-development-strategy.md` and `.ai/11-project-schedule.md`.
 Design work done: concept/scope, three-tier architecture, module layout, stack, matching/route/cost/ranking approach, booking + capacity rules, REST API design, DB schema (`10`), project proposal, task-level schedule with dependencies and critical path (`11`).
 
 ## Status values
@@ -28,12 +28,14 @@ Design work done: concept/scope, three-tier architecture, module layout, stack, 
 | routes | Not started | provider-abstracted, default OSRM (`01` §Routing) |
 | costs | Not started | |
 | bookings | Not started | |
-| payments | Not started | #19 approved sandbox-only scope; implementation is gated on INF-01 and INF-02 completion |
+| payments | Not started | Production-grade sandbox-only checkout; INF-01/02 complete; no live transactions |
+| installments / refunds / ledger / commission / settlements | Not started | Academic-grade persisted workflows; external operations simulated |
 | notifications | Not started | includes Socket.IO |
 | reviews | Not started | optional |
 | admin | Not started | v1 scope undecided |
 | jobs | Not started | TTL sweep, retention pruning, async notification delivery, rating recalc (Redis + BullMQ) |
-| feature-flags | Not started | flat named flags + custom roles, precedence user > provider > role > global, Redis-cached |
+| permissions / RBAC | Not started | Production-grade ADR-0003 model; replace legacy role-based design in planning docs |
+| feature-flags | Not started | Availability gates distinct from permission-based authorization; exact policy per issue #10 |
 
 ## Infrastructure
 | Item | Status | Notes |

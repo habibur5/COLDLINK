@@ -71,3 +71,6 @@ Eligibility, capacity availability, transport matching, route calculation, cost 
 
 ## Undecided
 Variable/function/constant casing; import order; path aliases vs relative imports; max function length/params; DTO naming and structure; auth/authz libraries; password-hashing tech; token format; env var names and config library; testing framework; dependency injection.
+# Project grade boundary (2026-11-08)
+
+Follow the Waterfall review gates in `.ai/11-project-schedule.md`. Preserve production-grade security, authorization, validation, persistence and tests for core features. Academic finance workflows also require persistence, validation and tests where applicable, but external financial actions are simulated or use sandbox attempts only. Never configure live payment credentials/endpoints.
