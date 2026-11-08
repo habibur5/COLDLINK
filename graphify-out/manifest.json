@@ -1,0 +1,152 @@
+{
+  ".prettierrc.json": {
+    "mtime": 1793770423.9256089,
+    "seen": 1793976895.7637115,
+    "ast_hash": "3b0dc7598fb850b398eb5aabfd44ea16",
+    "semantic_hash": "3b0dc7598fb850b398eb5aabfd44ea16"
+  },
+  "backend/package.json": {
+    "mtime": 1793966727.8760011,
+    "seen": 1793976895.7637217,
+    "ast_hash": "6d25c015c02b3af693699430ec44c301",
+    "semantic_hash": "6d25c015c02b3af693699430ec44c301"
+  },
+  "backend/prisma.config.ts": {
+    "mtime": 1793966771.590208,
+    "seen": 1793976895.7637243,
+    "ast_hash": "5ad5c6652ebe74a5a1867ee35f4fd62d",
+    "semantic_hash": "5ad5c6652ebe74a5a1867ee35f4fd62d"
+  },
+  "backend/src/app.ts": {
+    "mtime": 1793966771.6002083,
+    "seen": 1793976895.7637255,
+    "ast_hash": "9187e58b0e0e7f25a6b374c3c1d2df79",
+    "semantic_hash": "9187e58b0e0e7f25a6b374c3c1d2df79"
+  },
+  "backend/src/config/env.ts": {
+    "mtime": 1793966771.6122086,
+    "seen": 1793976895.7637265,
+    "ast_hash": "abbeabb6b8190e339ab81b7cc5adf565",
+    "semantic_hash": "abbeabb6b8190e339ab81b7cc5adf565"
+  },
+  "backend/src/db/client.ts": {
+    "mtime": 1793966771.618209,
+    "seen": 1793976895.7637274,
+    "ast_hash": "51b7d50873402a9e11717eb1272430fe",
+    "semantic_hash": "51b7d50873402a9e11717eb1272430fe"
+  },
+  "backend/src/server.ts": {
+    "mtime": 1793966771.625209,
+    "seen": 1793976895.7637281,
+    "ast_hash": "aa9a1a91dd5e611857aff5fd0f30dae2",
+    "semantic_hash": "aa9a1a91dd5e611857aff5fd0f30dae2"
+  },
+  "backend/tsconfig.json": {
+    "mtime": 1793966673.3027923,
+    "seen": 1793976895.763729,
+    "ast_hash": "90d61fc1e28814c98bc0d9dbd431b216",
+    "semantic_hash": "90d61fc1e28814c98bc0d9dbd431b216"
+  },
+  "eslint.config.mjs": {
+    "mtime": 1793966673.3014374,
+    "seen": 1793976895.7637298,
+    "ast_hash": "1b3f02ccbb2b648033090e30d8510de5",
+    "semantic_hash": "1b3f02ccbb2b648033090e30d8510de5"
+  },
+  "package.json": {
+    "mtime": 1793770549.8672316,
+    "seen": 1793976895.7637308,
+    "ast_hash": "5085bc2dc233932e12df0da406b5065f",
+    "semantic_hash": "5085bc2dc233932e12df0da406b5065f"
+  },
+  ".ai/00-PROJECT_OVERVIEW.md": {
+    "mtime": 1793973293.8748486,
+    "seen": 1793976895.7637317,
+    "ast_hash": "83878683324bc6e7ebc1a7f61e182549",
+    "semantic_hash": "83878683324bc6e7ebc1a7f61e182549"
+  },
+  ".ai/01-architecture.md": {
+    "mtime": 1793966079.7901106,
+    "seen": 1793976895.7637324,
+    "ast_hash": "6bcb6d916a7067a02691f9f9486051d9",
+    "semantic_hash": "6bcb6d916a7067a02691f9f9486051d9"
+  },
+  ".ai/04-database-prisma.md": {
+    "mtime": 1793966114.9841344,
+    "seen": 1793976895.7637334,
+    "ast_hash": "2133e3400da2b9b900ba1f5b8c113863",
+    "semantic_hash": "2133e3400da2b9b900ba1f5b8c113863"
+  },
+  ".ai/10-DB-SCHEMA.md": {
+    "mtime": 1793973293.8746111,
+    "seen": 1793976895.7637343,
+    "ast_hash": "cf712e8dcef84731b0e11bc0de04e647",
+    "semantic_hash": "cf712e8dcef84731b0e11bc0de04e647"
+  },
+  ".ai/11-project-schedule.md": {
+    "mtime": 1793966079.7907524,
+    "seen": 1793976895.763735,
+    "ast_hash": "b5127618970dc7c2a3f7544449c1c48f",
+    "semantic_hash": "b5127618970dc7c2a3f7544449c1c48f"
+  },
+  ".ai/adr/0001-bundle-based-matching-and-recommendations.md": {
+    "mtime": 1793966079.791082,
+    "seen": 1793976895.7637358,
+    "ast_hash": "42983e7018acc446d37de0d85d0a792c",
+    "semantic_hash": "42983e7018acc446d37de0d85d0a792c"
+  },
+  ".ai/adr/0002-per-vehicle-service-area.md": {
+    "mtime": 1790514975.0,
+    "seen": 1793976895.7637365,
+    "ast_hash": "f8de668b54c198bb1da2fd27bf7ce6c3",
+    "semantic_hash": "f8de668b54c198bb1da2fd27bf7ce6c3"
+  },
+  ".ai/adr/0003-permission-based-authorization.md": {
+    "mtime": 1792206237.0744202,
+    "seen": 1793976895.7637374,
+    "ast_hash": "08b055a56e7abd95f6bb976b62916f42",
+    "semantic_hash": "08b055a56e7abd95f6bb976b62916f42"
+  },
+  ".ai/adr/0005-provider-verification-and-service-applications.md": {
+    "mtime": 1793669615.8490367,
+    "seen": 1793976895.7637382,
+    "ast_hash": "5c817e5162f8a6dd745c0bf1bfd7f0df",
+    "semantic_hash": "5c817e5162f8a6dd745c0bf1bfd7f0df"
+  },
+  ".ai/adr/0006-payment-sandbox-boundary.md": {
+    "mtime": 1793966079.7911897,
+    "seen": 1793976895.7637389,
+    "ast_hash": "f8422319213dcfe65017641851cb9021",
+    "semantic_hash": "f8422319213dcfe65017641851cb9021"
+  },
+  ".ai/adr/0007-prisma-orm-for-mariadb.md": {
+    "mtime": 1793966114.9842873,
+    "seen": 1793976895.7637396,
+    "ast_hash": "af68688892447f5d4facd5b6599e1304",
+    "semantic_hash": "af68688892447f5d4facd5b6599e1304"
+  },
+  ".ai/adr/0008-commission-and-provider-settlement.md": {
+    "mtime": 1793973319.070573,
+    "seen": 1793976895.7637403,
+    "ast_hash": "d5d85f944bbf8e85ef2fd2ced785b66a",
+    "semantic_hash": "d5d85f944bbf8e85ef2fd2ced785b66a"
+  },
+  ".ai/payment-sandbox-scope.md": {
+    "mtime": 1793966753.6496563,
+    "seen": 1793976895.763742,
+    "ast_hash": "e95e02d9783dbdc602ae146c6320cc30",
+    "semantic_hash": "e95e02d9783dbdc602ae146c6320cc30"
+  },
+  "CONTEXT.md": {
+    "mtime": 1793973273.5511453,
+    "seen": 1793976895.7637424,
+    "ast_hash": "47664f8172cbbf00d85c758608418d65",
+    "semantic_hash": "47664f8172cbbf00d85c758608418d65"
+  },
+  "backend/src/README.md": {
+    "mtime": 1793966753.6492963,
+    "seen": 1793976895.7637432,
+    "ast_hash": "c649666e0f79b34f68f7e1298b59e1fb",
+    "semantic_hash": "c649666e0f79b34f68f7e1298b59e1fb"
+  }
+}
