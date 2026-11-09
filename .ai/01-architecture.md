@@ -27,7 +27,7 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 ## Modules (single source of truth)
 | Module | Owns |
 |---|---|
-| `auth` | Registration, login/logout, tokens, password reset, email verification |
+| `auth` | Registration, login/logout, tokens, password reset, email verification, and multi-session management (ADR-0011) |
 | `users` | User accounts and profiles |
 | `providers` | Provider profile; service capability (storage/transport/both) |
 | `crops` | Crop catalog |
@@ -123,6 +123,8 @@ All retention windows and the TTL duration are read from config/env — never ha
 ## Authorization and feature flags
 
 Authorization follows ADR-0003, not legacy role-based rules: permissions use `resource.action`; default deny; any applicable DENY wins; roles are permission bundles, and user-level assignments are the only other source. Resolution is server-side on every request with version-invalidated caching; tokens carry identity only. `.own` means party to the record and `.any` grants explicit cross-party access. The state machine and service layer independently enforce lifecycle, ownership, verification, and business rules. Never infer authority from a role name or `users.role`.
+
+Authentication follows ADR-0011: every account operation requires a verified email and an active server-side session. Access tokens are short-lived and carry no permission claims; session revocation invalidates access immediately.
 
 Feature flags gate feature availability and do not grant permissions. Both flag and permission must allow an operation. Use the accepted v1 catalog, scopes, precedence, audit, and failure behavior in issue #10; the prior user/provider/role precedence described in this document is superseded. Keep flag implementation distinct from permission resolution.
 

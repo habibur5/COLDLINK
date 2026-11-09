@@ -12,6 +12,22 @@ Read this before writing any spec, ADR, or ticket. Terms listed under **Supersed
 A person's ColdLink account. A user has no fixed account type; what they may do is decided entirely by their permissions.
 _Avoid_: account type, user role, user kind
 
+**Session**:
+One authenticated context for a User. A User may have multiple active sessions; ending or revoking a session ends its authenticated access.
+_Avoid_: login state, device account
+
+**Verified email**:
+An email address whose control the User has proven. Every V1 User must have a verified email before using account functionality.
+_Avoid_: registered email (when verification is meant)
+
+**Unverified phone contact**:
+An optional phone number the User has supplied but not proven control of. It is not an authentication or recovery method in V1.
+_Avoid_: phone-verified account, phone login
+
+**Contact history**:
+The preserved record of a User's previous email and phone contacts and their verification/change history. A historical contact does not itself establish current ownership.
+_Avoid_: current contact, account merge key
+
 **Profile**:
 Domain-specific information about a user for one activity — a farmer profile, a provider profile. A user may hold several; holding a profile grants no permission.
 _Avoid_: role, account type
@@ -57,7 +73,7 @@ The seeded, admin-editable role granted automatically at registration. It holds 
 _Avoid_: default role, system role, account type
 
 **Authorization resolution**:
-The single centralized mechanism that evaluates a user's effective permissions across role membership and user-level assignments, server-side on every request. No module decides access on its own, and access tokens carry identity only.
+The single centralized mechanism that evaluates a user's effective permissions across role membership and user-level assignments, server-side on every request. No module decides access on its own; access tokens carry user identity and a session reference only, never permission claims.
 _Avoid_: role check, per-module permission check, token claims
 
 **Platform Admin**:

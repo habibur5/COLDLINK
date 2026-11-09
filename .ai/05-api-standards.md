@@ -37,6 +37,9 @@ Do not invent endpoints outside this table or the current task. Action verbs (`a
 - `403 Forbidden` = an ownership check failed, a feature flag resolved to disabled for this caller, or a protected-system-role rule was violated (editing/deleting a system role, unassigning a user's structural role) (`01` §Authorization, §Feature Flags, §Roles).
 - Booking lifecycle: `requested → approved|rejected → confirmed → active → completed`, plus `cancelled` and `expired` (TTL sweep, `01` §Background Jobs).
 - `POST /bookings` requires an `Idempotency-Key` header; a repeated key returns the original response (`01` §Idempotency).
+- Authentication follows ADR-0011: access requests use `Authorization: Bearer <access-token>`; `/auth/refresh` uses the same header scheme with a refresh token and rejects access tokens. Access tokens last 15 minutes; refresh tokens last 30 days and rotate on successful refresh. Every account operation requires verified email and an active session; unverified login issues no tokens. Verification links are single-use, expire after 24 hours, and are invalidated by resend.
+- Signup requires email; an optional phone is normalized to E.164, stored unverified, masked/labeled in the UI, and is not usable for login or recovery in V1. Contact changes require verification before activation; preserve contact history and switch email only after the new email is verified.
+- Multiple sessions are allowed. Logout revokes the current session; revoke-all revokes every session. Both take effect immediately for access and refresh tokens.
 - #19 payment initiation is authenticated and idempotent. Provider callback/return/IPN endpoints verify provider state and payment-attempt references; browser redirects alone are never payment confirmation. Payment callbacks do not transition booking state.
 - The ADR-0010 collection endpoints record deterministic academic simulations; they do not initiate a payment-provider checkout. Capacity is rechecked transactionally on extension approval, and deemed return requires `overstay.confirm.any`.
 - Business errors are enforced in the backend (unsupported crop, no capacity, unavailable period, no suitable vehicle, invalid state transition, capacity conflict, ownership violation, disabled feature).
@@ -54,7 +57,7 @@ API docs are generated from Zod schemas (via an OpenAPI generator), not hand-mai
 - Request wrapper; success envelope (`{success,message,data}` is **not** a convention); error envelope; validation-error format; business error codes.
 - Status-code matrix (`409` capacity conflict and `403` ownership/feature-flag are defined; the rest is open).
 - Pagination (params and metadata).
-- Auth response JSON, token field names, token transport (body vs cookie).
+- Auth response JSON, token field names and token serialization/format. Header schemes and lifetimes are decided in ADR-0011.
 - JSON field casing (do not force camelCase or snake_case globally).
 - Per-endpoint JSON schemas.
 - Socket.IO event names, payloads, connection auth, ack format.

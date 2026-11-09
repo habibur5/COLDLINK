@@ -2,7 +2,7 @@
 
 # ColdLink — Database Schema (updated)
 
-Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADR-0003 and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
+Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADRs and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), ADR-0011 (authentication/session/contact policy), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions
@@ -27,20 +27,33 @@ This version applies the review changes. Everything not tagged is exactly as in 
 
 ```text
 users
-  id CHAR(36) PK · full_name VARCHAR(150) · email VARCHAR(150) UNIQUE · phone VARCHAR(20) UNIQUE
+  id CHAR(36) PK · full_name VARCHAR(150) · email VARCHAR(150) UNIQUE · phone VARCHAR(20) NULL UNIQUE
   password_hash VARCHAR(255) · role ENUM(farmer,provider,admin)
   status ENUM(active,suspended,deactivated) default active
   created_at · updated_at · last_login_at DATETIME NULL
   email_verified_at DATETIME NULL          -- [NEW] NULL = not verified; email verification flow (01 auth)
+  phone_verified_at DATETIME NULL          -- [NEW] V1 remains NULL; phone is not an auth/recovery method (ADR-0011)
+
+auth_sessions                                    -- [NEW TABLE] one server-side session / refresh-token family
+  id CHAR(36) PK · user_id CHAR(36) FK→users.id
+  created_at · last_used_at DATETIME NULL · revoked_at DATETIME NULL
+  -- Multiple active sessions per user. Revocation is checked on authenticated requests for immediate access-token invalidation.
 
 auth_tokens                                      -- [NEW TABLE] verification, password reset, refresh
-  id CHAR(36) PK · user_id CHAR(36) FK→users.id
+  id CHAR(36) PK · user_id CHAR(36) FK→users.id · session_id CHAR(36) NULL FK→auth_sessions.id
   token_type ENUM(email_verification,password_reset,refresh)
-  token_hash VARCHAR(64) UNIQUE                  -- hash only (e.g. SHA-256 hex), never the raw token
+  token_hash VARCHAR(64) UNIQUE                  -- hash only; never persist raw token
   expires_at DATETIME
-  used_at DATETIME NULL                          -- set when a one-time token is consumed
-  revoked_at DATETIME NULL                       -- set on logout / refresh revocation
+  used_at DATETIME NULL                          -- one-time token consumed, or refresh token successfully rotated
+  revoked_at DATETIME NULL                       -- token explicitly revoked; preserve rows for reuse detection/history
   created_at
+  -- Refresh tokens have session_id; verification/password-reset tokens do not. Each refresh rotation inserts a new row with a 30-day expiry.
+
+user_contact_history                             -- [NEW TABLE] preserve prior contact values and verification/change history
+  id CHAR(36) PK · user_id CHAR(36) FK→users.id
+  contact_type ENUM(email,phone) · contact_value VARCHAR(150) · normalized_value VARCHAR(150)
+  verified_at DATETIME NULL · changed_at DATETIME
+  -- Append-only history; historical values do not reserve current-contact uniqueness or transfer account ownership.
 
 farmer_profiles                                  -- 1:1 with users
   user_id CHAR(36) PK FK→users.id
@@ -341,6 +354,9 @@ The approved minimum persisted data for #19 is merchant reference, provider refe
 | 43 | `booking_extension_requests.farmer_id` | `farmer_profiles.user_id` | many-to-one | NO |
 | 44 | `overstay_records.storage_booking_id` | `storage_bookings.id` | one-to-one | NO |
 | 45 | `overstay_records.finalized_by` | `users.id` | many-to-one | YES |
+| 46 | `auth_sessions.user_id` | `users.id` | many-to-one | NO |
+| 47 | `auth_tokens.session_id` | `auth_sessions.id` | many-to-one | YES |
+| 48 | `user_contact_history.user_id` | `users.id` | many-to-one | NO |
 
 **Logical references (no DB FK):** `booking_status_history.entity_id` (→ `bookings` / `storage_bookings` / `transportation_bookings` by `entity_type`), `notifications.related_entity_id`, `admin_action_logs.target_entity_id`, `feature_flag_overrides.scope_id` (→ `roles.role_key` / `provider_profiles.user_id` / `users.id` by `scope`).
 
@@ -351,10 +367,13 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | Table | Index | Columns | Unique | Purpose |
 |---|---|---|---|---|
 | `users` | `uq_users_email` | `email` | yes | Login lookup |
-| `users` | `uq_users_phone` | `phone` | yes | Login lookup |
+| `users` | `uq_users_phone` | `phone` | yes | Unique current phone contact; not a V1 login identifier |
+| `auth_sessions` | `idx_auth_sessions_user_revoked` | `user_id, revoked_at` | no | List/revoke a user's active sessions `[NEW]` |
 | `auth_tokens` | `uq_auth_tokens_hash` | `token_hash` | yes | Token lookup `[NEW]` |
 | `auth_tokens` | `idx_auth_tokens_user` | `user_id, token_type` | no | A user's active tokens `[NEW]` |
+| `auth_tokens` | `idx_auth_tokens_session_type` | `session_id, token_type` | no | Refresh-token family lookup/revocation `[NEW]` |
 | `auth_tokens` | `idx_auth_tokens_expires` | `expires_at` | no | Expired token pruning `[NEW]` |
+| `user_contact_history` | `idx_contact_history_user_changed` | `user_id, changed_at` | no | Contact-change history `[NEW]` |
 | `crops` | `uq_crops_name` | `name` | yes | Catalog uniqueness |
 | `farm_locations` | `idx_farm_locations_farmer` | `farmer_id, status` | no | Active locations per farmer `[NEW]` |
 | `storage_facilities` | `idx_facilities_provider` | `provider_id, status` | no | Provider dashboard, ownership checks `[NEW]` |
@@ -432,7 +451,7 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 
 | ID | Priority | Table(s) | Change |
 |---|---|---|---|
-| M1 | Must | `users`, `auth_tokens` | Add `email_verified_at` and the new `auth_tokens` table; add an auth-token pruning job |
+| M1 | Must | `users`, `auth_sessions`, `auth_tokens`, `user_contact_history` | Apply ADR-0011 email/phone, session, token-history, and contact-history requirements; add an auth-token pruning job |
 | M2 | Must | `service_requests`, `transportation_bookings`, `recommendations` | Add `pickup_datetime`; add `duration_min` (NOT NULL on bookings, NULL on recommendations) |
 | M3 | Must | `recommendations` | Add `available_capacity_snapshot` |
 | M4 | Must | `idempotency_keys` | Add `user_id`, composite PK, `status`; nullable response columns |
@@ -454,8 +473,8 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 | D1 | Nothing moves a booking `confirmed → active → completed`, or an allocation `reserved → occupied` | Scheduled job in `jobs`, driven by start/end dates, writing `booking_status_history` rows |
 | D2 | For a `both` booking, one provider approves and the other rejects: undefined | Reject the parent, cancel the approved child, release its capacity |
 | D3 | `01` inserts the allocation before the booking, but `storage_booking_id` is required | Transaction order: booking → storage_booking → allocation. Lock with `SELECT ... FOR UPDATE` on the `facility_crop_configs` row so bookings serialize per facility+crop even with no allocation rows yet |
-| D4 | Auth token strategy (access/refresh, lifetimes) not decided | Decide before implementing `auth_tokens` |
+| D4 | Auth/session/contact policy | Resolved in ADR-0011; implement after the remaining schema reconciliation |
 | D5 | `booking_status_history` has no retention/archive plan | Keep as is for v1 (already deferred in `01`) |
 
 ## Undecided
-S1 (table name), S2 (units and day counting), S3 (drop `farmer_profiles.default_*`), D4 (token strategy). Never invent these: follow existing code, else ask.
+S1 (table name), S2 (units and day counting), S3 (drop `farmer_profiles.default_*`). Auth/session/contact policy is resolved in ADR-0011. Never invent undecided items: follow existing code, else ask.
