@@ -1,4 +1,4 @@
-> **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation. The audit-table shape below is a proposal under ADR-0013, not an approved final schema; audit ownership and failure/transaction decisions remain open.
+> **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation. The audit-table shape below remains a planning schema, not a migration-ready contract; ownership and transactional/failure requirements are settled by ADR-0013.
 
 # ColdLink — Database Schema (updated)
 
@@ -231,7 +231,7 @@ notifications
   related_entity_type VARCHAR(50) NULL · related_entity_id CHAR(36) NULL   -- not a DB FK
   is_read TINYINT(1) default 0 · created_at · read_at DATETIME NULL
 
-admin_action_logs                                 -- proposed shape; see ADR-0013 (not approved final schema)
+admin_action_logs                                 -- planning shape; central owner and behavior per ADR-0013
   id CHAR(36) PK · actor_user_id FK→users.id · action_key VARCHAR(100)
   access_type ENUM(state_change,sensitive_read)
   target_entity_type VARCHAR(50) · target_entity_id CHAR(36)               -- not a DB FK

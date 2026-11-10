@@ -22,7 +22,7 @@ A module owns its domain rules, contracts, persistence and HTTP handling, and mu
 | Feature-flag evaluation | `feature-flags` | re-implement flag availability policy in another module |
 | Permission catalog, role assignment, user-level ALLOW/DENY, and resolution | `authorization` | infer authority from role names or feature flags |
 | Admin-console entry points and bounded operational monitoring | `admin` | own or duplicate provider verification, booking, dispute, payment, financial, authorization, feature-flag, settings, or audit business rules |
-| Administrative action audit records | One append-only audit-log owner (assign before implementation) | let admin or domain modules edit/delete audit history or omit required admin-action and sensitive-read events |
+| Centralized audit recording, append-only persistence, and authorized retrieval | `audit` | own domain decisions/state changes, permit edits/deletes, or create competing audit stores |
 
 ## Dependency direction
 ```text
@@ -34,7 +34,7 @@ Route → Controller → Service → Repository → Prisma Client → Prisma sch
 - Routes must not run database or business workflows.
 - Cross-module calls go through the owning module's service/repository boundary, never its internals.
 - Admin operations are permission-checked at the admin boundary and delegated to the owning module's service. The admin module must not mutate another module's persistence directly or bypass its business invariants. See #11 and ADR-0012.
-- The module that owns append-only audit persistence and recording across domain operations remains to be assigned during architecture reconciliation; do not create competing per-module audit stores.
+- Domain-owning services record required authorization, administrative state-change, and specified sensitive-read events through the shared `audit` interface. Audit failure rolls back state changes and fails closed for specified sensitive reads (ADR-0013).
 - Dependencies must be purposeful and directional; avoid bidirectional ones and chains through internals.
 
 ## `shared/`

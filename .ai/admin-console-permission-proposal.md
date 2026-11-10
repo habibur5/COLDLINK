@@ -1,68 +1,74 @@
-# Admin-console permission-key proposal
+# Admin-console permission reconciliation
 
-**Status:** Proposed for review; not approved and not part of the seeded catalog. **Date:** 2026-11-10. Scope: [issue #11](https://github.com/habibur5/COLDLINK/issues/11). Existing decisions in [#9](https://github.com/habibur5/COLDLINK/issues/9), [#10](https://github.com/habibur5/COLDLINK/issues/10), and ADR-0003 remain authoritative and unchanged.
+**Status:** Approved mapping for #11; approved additions are not yet seeded. **Date:** 2026-11-10. Related: [issue #11](https://github.com/habibur5/COLDLINK/issues/11), [#9](https://github.com/habibur5/COLDLINK/issues/9), [#10](https://github.com/habibur5/COLDLINK/issues/10), and ADR-0003.
 
-This proposal reuses settled keys wherever possible. Only the keys in the “Proposed additions” table are candidates for addition, and none may be seeded or used until approved. `resource.action` follows ADR-0003. Party-scoped resources use a base key for party records and `.any` only for cross-party records. Global/non-party resources have no `.any`. No broad wildcard is proposed.
+This document reconciles #11's operations with the settled #9/#10 decisions. It does not modify those decisions or itself seed/update the runtime permission catalog. Approved additions must enter through #9's versioned migration process and be explicitly assigned to the bootstrap Platform Admin. Do not automatically grant them to ordinary users or existing roles.
+
+## Governing rules
+
+- Use the `resource.action` format and existing #9 authorization model: server-side checks, deny wins, default deny, and no authority inferred from role names.
+- On party-scoped resources, use the base key for a record where the caller is a party and `.any` only for cross-party access. Non-party resources have no `.any` form. There is no `.own` suffix.
+- Do not introduce global or resource wildcards for Admin Console access.
+- Preserve #9's explicit Platform Admin assignment rule for new curated keys. Preserve #10's flag catalog, precedence, lifecycle, and permissions unchanged.
+- Permission assignment changes use revoke plus grant and require both corresponding permissions. There is no separate update permission.
+- `delete` remains soft deletion/deactivation only. These additions create no new deletion operations or live financial capabilities.
 
 ## Reuse settled keys
 
 | #11 operation | Reuse | Scope/purpose |
 |---|---|---|
-| Application and capability review | `service-application.read`; `provider-verification.read`, `.approve`, `.reject`, `.request-info` | Use `.any` when reviewing a non-party applicant. `request-info` is the settled action spelling; do not add `service-application.request-information`. |
-| Account status | `user.suspend`, `user.reinstate` | Add `.any` for staff acting on a non-party user. Reasons and audit remain required by #11/ADR-0003. |
-| Facility/vehicle inspection and status | `facility.read`, `.suspend`, `.reinstate`; `vehicle.read`, `.suspend`, `.reinstate` | Use `.any` only for non-party facilities/vehicles. Approval/rejection/information-request keys are not settled for these resources; see proposed additions. |
-| Booking inspection/cancellation | `booking.read`, `booking.cancel` | Use `.any` for cross-party booking access/cancellation. Cancellation remains subject to the approved override reason and lifecycle constraints. |
-| Dispute inspection, filing, resolution | `dispute.read`, `.create`, `.resolve` | Use `.any` for staff cross-party access. Farmer-on-behalf filing reuses `dispute.create.any`; do not add `dispute.file`. Provider responses use party-scoped permissions and do not permit resolution. |
-| Sandbox payment-attempt inspection | `payment.read` | Use `.any` for non-party payment attempts; inspection only. |
-| Refund decisions | `refund.read`, `.approve`, `.reject` | Use `.any` for staff cross-party cases. Simulation submission/confirmation are separate candidate actions below. |
-| Penalty assessment/waiver | `penalty.create`, `.read`, `.waive` | Use `.any` for non-party records. `penalty.create.any` records a policy-compliant assessment; waiver remains distinct from reduction. |
-| Ledger and modeled balance approval | `ledger.read`; `settlement.approve` | Use `.any` for cross-party reads/approval. `settlement.approve.any` covers the eligible modeled Pending-to-Available transition under #21/ADR-0008. |
-| Simulated withdrawal/settlement | `settlement.read`, `.create`, `.approve`, `.execute` | Use `.any` for staff cross-party records. `execute` means only the already-approved academic simulation; it must never initiate a real transfer. |
-| Role CRUD and role membership | `role.read`, `.create`, `.update`, `.delete`, `.assign`, `.unassign` | Global resource; no `.any`. `delete` means deactivation. `assign/unassign` concern role membership, not permissions inside the role. |
-| Permission catalog | `permission.read` | Global, runtime read-only catalog. It does not grant authority to edit the catalog or assign a permission to a role/user. |
-| Feature-flag administration | `feature-flag.create`, `.read`, `.update`, `.override-role`, `.override-provider`, `.override-user`, `.archive` | Reuse #10 exactly. Global resource; no `.any`. No `feature-flag.delete`; archive is separate and irreversible. |
-| Platform settings | `platform-setting.read`, `.update` | Reuse for the existing settings catalog only; global resource, no `.any`. |
-| Bounded operational counts | `report.read` | Reuse for the approved read-only counts; global resource, no `.any`. No exports or additional analytics. |
-| Audit log | `audit-log.read` | Global resource, no `.any`; read permission does not allow editing/deleting audit records. |
+| Inspect service applications and provider verification; approve/reject/request information | `service-application.read`; `provider-verification.read`, `.approve`, `.reject`, `.request-info` | Add `.any` for cross-party records. Use the settled `request-info` spelling. |
+| Suspend/reinstate provider accounts and service applications/capabilities | `user.suspend`, `.reinstate`; `service-application.suspend`, `.reinstate` | Add `.any` for cross-party records. These actions already exist in #9; do not add parallel provider-verification suspension keys. Reasons and audit apply as required. |
+| Inspect, suspend, and reinstate facilities/vehicles | `facility.read`, `.suspend`, `.reinstate`; `vehicle.read`, `.suspend`, `.reinstate` | Add `.any` for cross-party records. Status actions already exist in #9; verification decisions remain separately permissioned. |
+| Inspect/cancel bookings | `booking.read`, `.cancel` | Add `.any` for cross-party records. Exceptional staff transitions are separately listed below. |
+| Inspect/file/resolve disputes; provider response | `dispute.read`, `.create`, `.resolve`, `.update` | Add `.any` for cross-party reads, farmer-on-behalf creation, and resolution. Provider response uses party-scoped `dispute.update`; providers cannot resolve. Do not add `dispute.file`. |
+| Inspect sandbox payment attempts | `payment.read` | Add `.any` for cross-party attempts; inspection only. |
+| Inspect/approve/reject refunds | `refund.read`, `.approve`, `.reject` | Add `.any` for cross-party records. Simulated submission and confirmation are distinct approved additions below. |
+| Inspect/create/waive penalties | `penalty.read`, `.create`, `.waive` | Add `.any` for cross-party records. Appeal submission is party-scoped; review, appeal resolution, simulated collection, and reduction are separate additions below. |
+| Inspect ledger and modeled balances; settlement operations | `ledger.read`; `settlement.read`, `.create`, `.approve`, `.execute` | Add `.any` for cross-party records. `execute` remains simulation-only and never authorizes a real transfer. |
+| Role CRUD and role membership | `role.read`, `.create`, `.update`, `.delete`, `.assign`, `.unassign` | Global resource; no `.any`. `delete` means deactivation. Role membership keys do not grant/revoke permissions within a role. |
+| Inspect permission catalog | `permission.read` | Global and runtime read-only; it does not permit catalog edits or assignment changes. |
+| Feature flags | #10 exact keys: `feature-flag.create`, `.read`, `.update`, `.override-role`, `.override-provider`, `.override-user`, `.archive` | Global resource; no `.any`. No `feature-flag.delete`; archive is irreversible and not implied by update. |
+| Platform settings | `platform-setting.read`, `.update` | Existing policy catalog only; global, no `.any`. |
+| Bounded operational counts | `report.read` | Global, no `.any`; no extra metrics, exports, or analytics. |
+| Audit log | `audit-log.read` | Global, no `.any`; does not permit editing or deleting records. |
 
-## Proposed additions — approval required
+## Approved additions for the #9 catalog follow-up
 
-All keys below are **proposals only**. `.any` is shown only where the operation targets a record outside the staff member's party relationship.
+Every key below is approved for inclusion through the #9 migration/catalog process. The `.any` suffix is used only for cross-party access. These are catalog decisions, not implementation authorization.
 
-| Proposed key | Exact operation | Scope | Why it is a gap |
-|---|---|---|---|
-| `facility.approve.any` | Approve evidence for a specific facility | Cross-party | #9 settles facility read/status actions but not resource-verification decisions. |
-| `facility.reject.any` | Reject evidence for a specific facility, requiring reason | Cross-party | Rejection must be separately permissioned from approval. |
-| `facility.request-info.any` | Request additional evidence/information for a facility review | Cross-party | Existing `provider-verification.request-info` concerns capability verification; facility review is a distinct gate under ADR-0005. |
-| `vehicle.approve.any` | Approve evidence for a specific vehicle | Cross-party | Same independent resource-verification gap. |
-| `vehicle.reject.any` | Reject evidence for a specific vehicle, requiring reason | Cross-party | Rejection must be separately permissioned from approval. |
-| `vehicle.request-info.any` | Request additional evidence/information for a vehicle review | Cross-party | Vehicle review is a distinct resource-verification gate. |
-| `provider-verification.suspend.any` | Suspend an approved service capability | Cross-party | Capability suspension is not application suspension and is absent from the settled provider-verification actions. |
-| `provider-verification.reinstate.any` | Reinstate a suspended service capability | Cross-party | Separate reinstatement action is required; application lifecycle keys are not a substitute. |
-| `booking.approve.any` | Staff exceptional approval of a provider's booking component | Cross-party | #9 does not settle this staff override key; it is not ordinary party approval. |
-| `booking.complete.any` | Staff exceptional marking of a booking component as completed | Cross-party | #9 rejects per-transition permissions for ordinary party actions; this is only the specifically approved cross-party staff override and requires a reason. |
-| `refund.simulate-submit.any` | Record the simulated submission step of an academic refund | Cross-party | #22 distinguishes submission from completion; existing `refund.approve/reject` do not authorize submission. |
-| `refund.simulate-confirm.any` | Record simulated refund confirmation/completion | Cross-party | Separate from simulated submission and does not call a provider. |
-| `penalty.review.any` | Review whether a reported provider failure/violation supports assessment | Cross-party | #22 requires review before an eligible post-acceptance penalty; no settled review action exists. |
-| `penalty.resolve-appeal.any` | Decide a provider penalty appeal, including partial approval | Cross-party | Appeal decisions are distinct from penalty assessment and waiver. |
-| `penalty.simulate-collect.any` | Record authorized simulated collection of an assessed penalty | Cross-party | #22 defines simulated collection; no settled penalty collection key exists. |
-| `penalty.reduce.any` | Record a policy-compliant partial penalty reduction | Cross-party | #22 distinguishes partial reduction from waiver; user requested separate permissions. |
-| `commission.read` | Read provider/service commission rates and exceptions | Global configuration | #9 has no `commission` resource. This avoids overloading the broader `platform-setting` permission. |
-| `commission.update` | Create/update the already-defined provider/service rates and negotiated exceptions under #21/ADR-0008 | Global configuration | Same resource gap. It does not authorize new rates, fees, or financial policies. |
-| `role.grant-permission` | Add a permission assignment to an editable role | Global role | `role.assign` is role membership; `permission.read` is catalog-only. Neither authorizes editing a role's permission bundle. |
-| `role.update-permission` | Change an existing permission assignment/effect on an editable role | Global role | Separates permission-bundle changes from general role metadata updates. |
-| `role.revoke-permission` | Remove a permission assignment from an editable role | Global role | Permission revocation needs explicit authority and audit; system/bootstrap constraints remain governed by ADR-0003. |
-| `user.grant-permission.any` | Grant a user-level ALLOW or DENY assignment | Cross-party user | `user.update` is too broad; no settled key authorizes user-level permission assignment. DENY reason requirements remain per ADR-0003. |
-| `user.update-permission.any` | Change an existing user-level permission assignment/effect | Cross-party user | Assignment modification is distinct from grant and revocation. |
-| `user.revoke-permission.any` | Revoke a user-level permission assignment | Cross-party user | Revocation needs explicit authority and audit. |
+| Approved key | Exact operation | Scope and purpose |
+|---|---|---|
+| `facility.approve.any` | Approve a specific facility's evidence | Cross-party facility verification, independently of provider approval |
+| `facility.reject.any` | Reject a specific facility's evidence | Cross-party; rejection reason required |
+| `facility.request-info.any` | Request facility evidence/information | Cross-party facility review; distinct from provider capability verification |
+| `vehicle.approve.any` | Approve a specific vehicle's evidence | Cross-party vehicle verification, independently of provider approval |
+| `vehicle.reject.any` | Reject a specific vehicle's evidence | Cross-party; rejection reason required |
+| `vehicle.request-info.any` | Request vehicle evidence/information | Cross-party vehicle review |
+| `booking.approve.any` | Approve a provider's booking component as an exceptional staff action | Cross-party; reason required; obey booking state machine, party, verification, and capacity rules |
+| `booking.complete.any` | Mark a booking component completed as an exceptional staff action | Cross-party; reason required; obey booking state machine and business invariants; no separate case document or supporting evidence required |
+| `refund.record-submission.any` | Record simulated refund submission | Cross-party academic simulation; not a provider API call or confirmation |
+| `refund.record-confirmation.any` | Record simulated refund confirmation | Cross-party academic simulation; separate from submission and no provider API call |
+| `penalty.review.any` | Review whether a reported failure/violation supports an assessment | Cross-party review under the existing penalty rules |
+| `penalty.appeal` | Submit an appeal on a party-scoped penalty | Party-scoped provider operation; no `.any` in this key |
+| `penalty.resolve-appeal.any` | Resolve a provider penalty appeal | Cross-party decision under existing appeal rules |
+| `penalty.record-collection.any` | Record simulated penalty collection | Cross-party academic simulation; no actual money collection |
+| `penalty.reduce.any` | Record a policy-compliant partial penalty reduction | Cross-party; distinct from waiver |
+| `commission.read` | Read commission configuration | Global configuration for already-approved provider/service rates and exceptions |
+| `commission.update` | Update commission configuration | Global; limited to approved rates, negotiated exceptions, and snapshot rules; no new financial policies/fees/charges |
+| `role.grant-permission` | Grant a permission within an editable role | Global role operation; distinct from assigning a role to a user |
+| `role.revoke-permission` | Revoke a permission within an editable role | Global role operation; distinct from unassigning a role |
+| `user.grant-permission.any` | Grant a user-level ALLOW or DENY assignment | Cross-party user; DENY reasons remain mandatory under ADR-0003 |
+| `user.revoke-permission.any` | Revoke a user-level permission assignment | Cross-party user; authorization change is audited |
 
-## Constraints retained
+### Permission-assignment changes
 
-- These proposals do not change #9's resource catalog, its fixed/versioned seeding model, its role/user assignment sources, or its deferred action-set decision. If approved, additions must follow #9's migration and explicit Platform Admin assignment rules.
-- They do not change #10's flag catalog, scope, precedence, lifecycle, or exact permission keys.
-- They do not authorize hard deletion, live payment/refund/collection, real payout/settlement, or bypass of #21/#22 policy.
-- No `resource.*` wildcard is proposed as a shortcut for granting console access. Each proposed key is a distinct operation; `.any` is limited to cross-party access.
+Changing an existing role or user permission assignment is performed as a revoke plus grant. The operation requires both the relevant `*.revoke-permission` and `*.grant-permission` permissions. No `role.update-permission` or `user.update-permission.any` key is added. Role grants/revocations concern role-permission membership; user grants/revocations concern direct user-level assignments. Catalog editing remains migration/seeding-only.
 
-## Approval requested
+## Explicit exclusions and constraints
 
-Review the proposed keys, particularly the commission resource, booking overrides, simulated refund/penalty operations, and role/user permission grant-update-revoke actions. Do not add these keys to the catalog or implement them until explicitly approved.
+- Do not change #9's catalog model, permission sources, resolution, bootstrap behavior, or other settled decisions. Additions are explicitly granted to the bootstrap Platform Admin by the migration, not to ordinary users or existing roles.
+- Do not change #10's flag catalog, scopes, precedence, lifecycle, or permissions.
+- Do not add duplicate facility/vehicle/service-application suspend or reinstate keys; those actions are already in #9.
+- Do not add broad wildcard permissions, hard deletion, real-money transfer/collection, live provider calls, or policy-bypassing operations.
+- All financial behavior remains within the already-approved simulated workflows and policy boundaries.

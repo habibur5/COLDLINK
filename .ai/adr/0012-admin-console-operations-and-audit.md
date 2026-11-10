@@ -32,12 +32,12 @@ No general-purpose user CRUD, advanced analytics, unlisted statistics, exports, 
 
 1. Every state-changing administrative action is recorded in the append-only audit log with actor, action, target, before/after values, timestamp, and any required reason. Every booking lifecycle action above requires a reason. Existing policy-specific reason requirements remain in force.
 2. Sensitive reads of payment, dispute, and ledger records also create audit entries. Ordinary reads follow existing access and security logging rules.
-3. Audit entries cannot be edited or deleted through the Admin Console. The owner of the shared audit-recording/persistence boundary must be assigned during architecture reconciliation; domain modules must not create competing audit stores.
+3. Audit entries cannot be edited or deleted through the Admin Console. The dedicated `audit` module owns shared append-only recording and authorized retrieval under ADR-0013. Domain modules submit required events through its shared interface and retain their domain rules and state changes.
 
 ## Consequences
 
 - The `admin` module is an entry point and coordinator, not the owner of booking, verification, dispute, payment, academic-finance, authorization, feature-flag, settings, or audit business rules. Commands delegate through owning-module boundaries and preserve their invariants.
-- `.ai/01-architecture.md`, `.ai/05-api-standards.md`, `.ai/06-module-rules.md`, and `.ai/10-DB-SCHEMA.md` must reflect this decision before implementation. API route details, permission-catalog reconciliation, audit-module ownership, and implementation-specific schema details remain design work; they are not silently decided here.
+- `.ai/01-architecture.md`, `.ai/05-api-standards.md`, `.ai/06-module-rules.md`, and `.ai/10-DB-SCHEMA.md` must reflect this decision before implementation. API route details and implementation-specific schema details remain future work. Permission mapping is finalized in `.ai/admin-console-permission-proposal.md` and issue #11; additions remain subject to the #9 migration process.
 - Mixed-grade scope remains classified in `.ai/12-development-strategy.md`: operational admin functions are production-grade; academic finance controls are persisted/simulated only. No live financial capability is authorized.
 
 ## Alternatives rejected

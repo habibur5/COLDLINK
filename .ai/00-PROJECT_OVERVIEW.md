@@ -40,4 +40,4 @@ AI/ML recommendations, weather prediction, live GPS tracking, blockchain, multi-
 - `.ai/11-project-schedule.md`: sequential Waterfall phase plan and gates.
 - `.ai/09-feature-progress.md`: code-inspected implementation status.
 - `.ai/10-DB-SCHEMA.md`: data-model reference; update it before schema implementation.
-- `.ai/adr/`: accepted architecture decisions; ADR-0006, ADR-0008, and ADR-0010 define financial scope boundaries, ADR-0011 defines V1 authentication/session/contact policy, and ADR-0012 defines the permissioned admin-console scope and audit rules.
+- `.ai/adr/`: accepted architecture decisions; ADR-0006, ADR-0008, and ADR-0010 define financial scope boundaries, ADR-0011 defines V1 authentication/session/contact policy, ADR-0012 defines the permissioned admin-console scope, and ADR-0013 defines centralized audit ownership and consistency.

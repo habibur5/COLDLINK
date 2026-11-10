@@ -46,12 +46,13 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 | `notifications` | Persisted notifications + Socket.IO delivery |
 | `reviews` | Ratings (optional module) |
 | `admin` | Backend admin-console operations and bounded operational monitoring; coordinates with domain-owning modules and does not own their business rules |
+| `audit` | Centralized append-only audit recording and authorized retrieval; domain services submit required events through its shared interface |
 | `jobs` | Scheduled/background work: booking TTL sweep, retention pruning, async notification delivery, rating recalculation (§Background Jobs below) |
 | `feature-flags` | Centralized feature-flag evaluation, lifecycle, and overrides — availability logic only, never permission/role management (§Feature Flags below) |
 
 `payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is strictly sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. ADR-0010 installment collection is a deterministic academic simulation, not a recurring agreement or payment-provider attempt. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
 
-The backend admin console is defined by #11 and ADR-0012; there is no V1 admin UI. `admin` exposes explicitly permissioned operations and the approved read-only operational counts. It delegates provider verification, bookings, disputes, payments, academic financial workflows, authorization, feature flags, and settings to their owning modules. Audit recording uses one shared append-only boundary; its module owner is assigned before implementation. The admin module does not grant authority by role name or bypass an owning module's state machine, ownership, verification, capacity, or policy checks. Every state-changing admin action is audited; sensitive reads of payment, dispute, and ledger records are audited as well.
+The backend admin console is defined by #11 and ADR-0012; there is no V1 admin UI. `admin` exposes explicitly permissioned operations and the approved read-only operational counts. It delegates provider verification, bookings, disputes, payments, academic financial workflows, authorization, feature flags, and settings to their owning modules. The dedicated `audit` module provides the shared append-only recording boundary under ADR-0013; domain services own business rules and state changes and submit required events through its shared interface. The admin module does not grant authority by role name or bypass an owning module's state machine, ownership, verification, capacity, or policy checks. Every state-changing admin action is audited; specified sensitive reads are audited before data is returned.
 
 ## Module interaction
 ```text
