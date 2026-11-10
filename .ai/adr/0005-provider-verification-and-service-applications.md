@@ -14,7 +14,7 @@ The design must keep four concepts separate:
 3. **Resource verification** — the evidence decision for each individual facility or vehicle.
 4. **Permission** — whether the user is authorized to perform an operation. Permission neither grants capability nor passes verification.
 
-ColdLink is intended for a Bangladesh pilot, so evidence must include applicable legal documents without turning uncertain legal claims into universal gates. Public sources establish that a commercial cold store requires a licence under the Agricultural Marketing Act 2018, section 6, and that the Road Transport Act 2018 addresses vehicle registration, fitness and route permits. Exact DAM licence scope and some vehicle-category requirements still need written confirmation before implementation.
+ColdLink is intended for a Bangladesh pilot. Provider verification is a manual admin review of evidence providers submit. Evidence types are admin-configurable categories at the approved level; ColdLink does not assert that a particular document is a legal requirement.
 
 ## Decision
 
@@ -42,14 +42,14 @@ Any staff member with the relevant review permissions may decide. The target is 
 
 **5. Evidence is service-specific; law and platform policy are distinguished.**
 
-- **Provider:** require identity, applicable business identity, and authority to operate.
-- **Storage capability/facility:** require a current DAM cold-storage licence that covers the facility, together with facility control/address evidence, facility details, and geotagged photos. ColdLink verifies the capability and each facility independently.
-- **Transport vehicle:** require registration, current fitness, a route permit where legally applicable, control evidence, vehicle details, and photos. Applicability is checked by vehicle category and use.
-- **Driver:** verify the assigned driver's current driving licence and correct vehicle class before assignment. If the provider is also the driver, verify them in that capacity.
-- **Insurance:** do not impose a blanket insurance-document requirement unless it is legally required for that vehicle/service or required by the licensed partner. Optional evidence may be submitted; any wider platform requirement must be an explicit configurable policy.
+- **Provider:** admins may review submitted identity, business-identity, and authority-to-operate evidence categories.
+- **Storage capability/facility:** admins may review submitted facility-control/address evidence, facility details, geotagged photos, and other configured evidence categories. ColdLink verifies the capability and each facility independently.
+- **Transport vehicle:** admins may review submitted vehicle-control evidence, vehicle details, photos, and other configured evidence categories.
+- **Driver:** admins may review submitted driver and vehicle-class evidence before assignment.
+- **Insurance:** admins may configure insurance as an evidence category; ColdLink does not assert it as a legal requirement.
 - **Review method:** begin with remote document review and geotagged facility/vehicle photos. Physical inspection is reserved for risk flags or exceptions.
 
-Legally required documents are mandatory. Platform evidence (such as resource-control evidence and geotagged photos) is identified as ColdLink policy, not misrepresented as a universal statutory requirement. Verify the exact legal applicability before implementation.
+Evidence categories are admin-configurable at the approved level. ColdLink does not determine or assert the legal applicability of submitted document types.
 
 **6. Expiry and material changes trigger re-verification.**
 
@@ -67,7 +67,7 @@ Suspension blocks new marketplace activity, not silently cancels existing bookin
 - **Multiple independent histories are required:** preserve the application, per-capability decisions, per-resource evidence/review attempts, requested-information cycles, suspensions, reinstatements, and audit history. A later service request links to, but does not rewrite, the initial application.
 - **Expiry and material changes affect only the relevant resource.** They do not silently revoke another capability or another facility/vehicle under the same user.
 - **The review target is not the regulator's licensing SLA.** DAM licensing is external; a DAM district charter example lists 30 working days, while ColdLink's own review target is three business days after complete evidence.
-- **The production-core evidence implementation gate remains subject to manual legal confirmation (issue #20; no regulator-system integration):** DAM must confirm licence-to-facility/name scope, forms, validity/renewal and expiry rules; BRTA must confirm route-permit classification and current tax/fitness/registration evidence for the actual goods-vehicle categories; current insurance obligations must be verified before treated as law. Public findings are not legal advice.
+- Provider verification is manual and does not depend on DAM/BRTA confirmation (amended 2026-11-10; supersedes the earlier issue #20 gate): ColdLink admins review the evidence providers submit. ColdLink does not obtain written DAM/BRTA confirmation, does not integrate with any regulator system, and does not assert any DAM licence, BRTA route permit, registration, fitness, tax-token or insurance document as a legal requirement. Evidence types are admin-configurable categories at the approved level. Issue #20 is closed as not planned. Public findings are not legal advice.
 - Implementation implications for `01`, `05`, `06`, `10`, and the lifecycle design include distinct application/capability/resource-verification concepts, per-resource visibility gates, reviewer permissions, evidence expiry, audit records, and booking triage on suspension/re-verification. These documents are not yet updated.
 
 ## Alternatives considered
@@ -78,4 +78,4 @@ Suspension blocks new marketplace activity, not silently cancels existing bookin
 - **Make every user edit re-verification-worthy** — rejected; ordinary price, availability, crop-configuration, and service-area edits follow their own rules and should not interrupt verified supply.
 - **Auto-approve when a review or information deadline expires** — rejected; timeout is not evidence of compliance.
 - **Silently cancel active bookings when an asset/account is suspended or re-verification begins** — rejected; affected bookings require explicit lifecycle review and a reasoned operational outcome.
-- **Require blanket insurance or speculative permits** — rejected; only documents established as applicable by law or partner requirements are hard gates; broader risk controls must be explicit policy.
+- **Require blanket insurance or speculative permits** — rejected; evidence types are admin-configurable categories, not asserted legal requirements.

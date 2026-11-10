@@ -63,6 +63,6 @@ Every retained open issue has exactly one grade label: `grade:production` or `gr
 | #14 deployment/environments | Production core | No live payment configuration or real-money capability |
 | #15 booking/component lifecycle | Production core | Core lifecycle/capacity production; financial consequences simulated and academic |
 | #19 payment sandbox integrations | Production core | Sandbox only; no production credentials or live endpoint |
-| #20 provider-evidence confirmation | Production-core planning gate | Manual evidence confirmation only; no regulator-system integration |
+| #20 provider-evidence confirmation | Closed (not planned) | Provider verification is manual admin review; no DAM/BRTA confirmation or regulator-system integration |
 
 Issue #18 partner/custody research is historical and closed; its real-world partner deliverable is removed. #16 and #17 remain closed historical decisions; their prior real-custody assumptions do not authorize operations and are superseded by this strategy.

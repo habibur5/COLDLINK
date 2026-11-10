@@ -16,7 +16,7 @@ ColdLink is a Bangladesh-focused marketplace where farmers compare and book cold
 - Routing is provider-abstracted; default OSRM on Bangladesh OSM data. Route absence means infeasible; routing and matching rules are documented in ADR-0001/0002 and `01`.
 - Booking snapshots agreed prices and uses a transaction with row locking for capacity safety. Booking/component state transitions and capacity correctness are production-grade.
 - A user has no fixed account type. Authorization uses the accepted permission model in ADR-0003: server-side, default-deny, explicit party scope, deny-wins and auditable.
-- Provider capability approval and each resource's verification are separate marketplace visibility gates (ADR-0005). Legal evidence uncertainty is tracked in #20; no regulator-system integration is in scope.
+- Provider capability approval and each resource's verification are separate marketplace visibility gates (ADR-0005). Verification is manual admin review; evidence categories are admin-configurable, with no DAM/BRTA confirmation or regulator-system integration.
 - No hard deletion of records referenced by bookings; deactivation/soft deletion preserves history.
 
 ## Payment and finance boundary
