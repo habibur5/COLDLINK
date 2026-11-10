@@ -1,309 +1,211 @@
-# ColdLink — Proposed Data-Model Reconciliation
+# ColdLink — Reconciled Data-Model Decisions
 
-**Status:** Proposed conceptual/logical model for review; not an implementation contract.
-**Scope:** Reconcile approved domain decisions for future schema work and ER documentation. No Prisma models, migrations, or diagrams are specified here.
+**Status:** Reconciled conceptual/logical model for human review; not a physical schema or implementation contract.
+**Scope:** Apply accepted ADRs, closed decisions, the approved current clarifications recorded in ADR-0014/0015, and existing project requirements. No Prisma models, migrations, source code, or diagrams are specified here.
 
 ## 1. Scope and source-of-truth hierarchy
 
-This document reconciles approved ColdLink V1 concepts and identifies logical relationships needed to represent them. It does not authorize new behavior, settle open product decisions, or prescribe physical database structures.
+This document and `.ai/10-DB-SCHEMA.md` describe a planned conceptual model. They do not claim that planned business features are implemented. The current Prisma schema contains only generator/datasource configuration; business modules, domain models, and migrations remain unimplemented per `.ai/09-feature-progress.md`.
 
-Use sources in this order when reconciling conflicts:
+Use sources in this order:
 
-1. Accepted ADRs and closed decision outcomes for the subject.
-2. `CONTEXT.md` for canonical domain language and explicitly superseded concepts.
-3. Current approved architecture and API documents for module ownership and interaction boundaries, subject to higher-priority decisions.
-4. `.ai/10-DB-SCHEMA.md` only for compatible details that have been reviewed and resolved. It is a planning reference, explicitly not migration-ready.
-5. Current code only to describe implementation status, not to overturn an approved design decision.
+1. Accepted ADRs and explicitly closed decision outcomes, including later amendments.
+2. Approved requirements and canonical vocabulary in `CONTEXT.md`.
+3. Architecture and API documentation, where compatible with higher-priority decisions.
+4. Compatible details from the legacy schema draft only after review; `.ai/10-DB-SCHEMA.md` is not an implementation contract.
+5. Existing code as evidence of implementation status, not as authority to replace approved requirements.
 
-GitHub issue #1 is a decision map and contains both accepted decisions and historical/reconciled content. For its statements, follow the linked accepted ADRs and closed issue outcomes. Open issues—including #15—remain unresolved. Proposed relationships below are modeling recommendations, not silent decisions.
+ADR-0014 supersedes ADR-0001's split-fulfillment design for V1. ADR-0015 clarifies the scope of sandbox payment attempts without changing the no-real-money boundary. ADR-0002 remains authoritative for vehicle service areas and route feasibility. ADR-0005/0014 govern provider/resource verification and resource lifecycle.
 
-### Status labels
+### Labels
 
-- **Confirmed requirement** — explicitly established by an accepted ADR, closed decision, or glossary.
-- **Proposed model** — a reviewable way to represent confirmed concepts and relationships; not yet a physical schema decision.
-- **Unresolved** — source material leaves the decision open or assigns it to a later decision/implementation task. Do not infer a final relationship or state model.
+- **Confirmed** — an approved requirement or accepted decision.
+- **Proposed model** — a simple logical representation of confirmed behavior; not a physical schema decision.
+- **Unresolved** — no approved source settles the choice. It remains open even if one option is recommended.
 
 ## 2. Confirmed domain entities and responsibilities
 
-The names below describe domain records, not classes. Modules retain the existing domain-oriented modular-monolith architecture; this model does not introduce OOP patterns or new architectural services.
+### Identity and authorization
 
-### Identity, access, and contacts
+- **User** — account identity; no fixed account type.
+- **Farmer profile / Provider profile** — optional domain profile associated with one User. A User may hold both. Profiles grant no authority.
+- **Session / token record / contact history** — follow ADR-0011: multiple revocable Sessions; hashed refresh-token history; verified email requirement; preserved contact-change history.
+- **Role** — editable named permission collection. Seeded roles include `user`, `admin`, `farmer`, `provider`, and `staff`; `user` is the ordinary registration baseline. Names grant no authority.
+- **Permission catalog, role-permission assignment, user-role membership, direct user permission assignment** — explicit authorization records. Direct assignments have ALLOW or DENY effect; applicable DENY wins, otherwise ALLOW, otherwise deny.
 
-| Entity/concept | Responsibility and confirmed boundary |
-|---|---|
-| **User** | A person’s account; no fixed account type. A User may have multiple profiles and activities. V1 account use requires verified email. |
-| **Session** | One authenticated context for a User. Multiple active Sessions are allowed; revocation ends authenticated access immediately. |
-| **Authentication token record** | Stores token hashes and lifecycle metadata; refresh tokens are linked to a Session and rotation history is preserved. Raw tokens are not persisted. |
-| **Contact history** | Preserves prior email/phone values and verification/change history. A historical contact does not prove present ownership or merge accounts. |
-| **Profile** | Domain-specific information for an activity, such as farmer or provider. A profile grants no permission. A User may have several. |
-| **Role** | An editable, named collection of permissions. Initial setup seeds predefined roles such as `user`, `admin`, `farmer`, `provider`, and `staff`; they remain manageable and their names carry no authority. `user` is the registration baseline role, not an account type. |
-| **Permission** | A catalogued atomic resource/action key. The catalog is seeded/versioned; new keys are not automatically granted. |
-| **Role permission assignment** | Associates a Permission with a Role. |
-| **User role membership** | Associates a User with a Role. Registration assigns the approved baseline role. |
-| **Direct user permission assignment** | Associates a User with a Permission and an ALLOW or DENY effect. Applicable DENY wins; otherwise an ALLOW grants access; otherwise access is denied. |
+Permissions attach only to Roles and Users. No structural account-type roles, provider-scoped permissions, global permission scope, or global wildcard.
 
-Permissions attach only to Roles and Users. There are no provider-scoped or global Permission assignments and no global wildcard. Party scope and `.any` are authorization semantics, not separate ownership entities.
+### Providers, verification, and resources
 
-### Provider onboarding, capability, and supply
-
-| Entity/concept | Responsibility and confirmed boundary |
-|---|---|
-| **Service application** | A User’s initial request to offer one or more service types. Later capability additions are separate support-mediated requests linked to the original history. |
-| **Capability request / provider verification decision** | Records the independent decision for each requested service capability. Approval of one capability does not decide another. Application outcome is derived from its requested decisions. |
-| **Evidence record** | Represents submitted evidence for a capability or a specific resource, including applicable expiry/material-change information. Legal applicability must follow confirmed policy, not assumptions. |
-| **Review/history record** | Preserves review attempts, information requests, resubmissions, decisions, reasons, and relevant actor/time history. Rejected evidence history is not overwritten by a new attempt. |
-| **Crop** | Catalog product stored or transported; V1 is English-only. |
-| **Storage facility** | Physical storage destination owned/operated by a provider. It has no service-area radius. |
-| **Facility crop config** | Facility/crop pairing with capacity ceiling, price per unit per day, and ordinary availability toggle. Its existence establishes crop compatibility in V1. |
-| **Vehicle** | Provider-owned transport resource. Vehicle type, suitability, capacity, availability, verification, and service area are evaluated per vehicle. |
-| **Vehicle service area** | One declared circular area per vehicle in V1. It is not a provider-level service area. |
-| **Resource verification** | Evidence decision for one facility or vehicle, independent of provider capability approval. |
-| **Capacity allocation / vehicle availability block** | Records dated storage commitment or transport commitment/manual block. Capacity and availability remain separate from verification and permission. |
-
-Marketplace visibility requires the applicable approved capability and independently verified, active resource, as well as permission, ownership/party, eligibility, and ordinary business-state checks. None substitutes for another.
+- **Provider account/profile** — one User may request/hold storage capability, transport capability, or both and may own multiple facilities and vehicles.
+- **Service application / capability request** — one initial application per User; each requested capability has an independent decision. Later support-mediated capability additions remain linked to the original history.
+- **Evidence and review history** — evidence submissions, requests for information, review attempts, decisions, reasons, and history for capability or resource decisions. Evidence categories are admin-configurable. Issue #20 is closed as not planned; there is no regulator integration or assertion that particular documents are legally required.
+- **Storage facility / Vehicle** — each resource belongs to exactly one Provider account. Shared ownership and transfers between Provider accounts are not supported in V1.
+- **Resource verification** — verification belongs to one individual facility or vehicle, independently of provider capability approval. One verified resource can operate while others are incomplete or pending review.
+- **Resource update proposal** — details requiring review for an already verified resource remain staged; its previously approved details remain effective while pending. Approval replaces them; rejection leaves them unchanged. The staged-update record shape is proposed, not physically selected.
+- **Resource status** — `active`, `suspended`, or `deactivated`, separate from verification and ordinary availability. Administrators can activate, suspend, deactivate, and reactivate individual resources. Only complete, verified, active resources receive new requests. Suspension/deactivation does not automatically cancel accepted bookings, which may still be fulfilled. Reactivation restores active status and does not itself trigger re-verification; independently applicable evidence requirements remain.
+- **Facility-crop configuration / storage capacity allocation** — crop compatibility, per-crop capacity/price/availability, and dated capacity use.
+- **Vehicle service area / vehicle availability block** — one circular area per vehicle; dated vehicle commitment/manual block. No provider-level area.
+- **Crop / Farm location** — V1 English-only crop catalog; each Farmer may own reusable Farm locations, each belonging to exactly one Farmer. A Farm location holds farm address/coordinates, not the general User Profile.
 
 ### Demand, recommendation, and fulfillment
 
-| Entity/concept | Responsibility and confirmed boundary |
-|---|---|
-| **Farm location** | Reusable location belonging to a farmer profile and containing its address and geographical coordinates. Farm-specific location data is not duplicated in the User Profile. |
-| **Service request** | Farmer’s need for one crop, one quantity, and storage, transport, or both. Multi-crop requests are out of V1 scope. |
-| **Bundle recommendation** | Persisted, expiring complete fulfillment option for a request. Feasible bundles are ranked; matching is deterministic/heuristic, not exhaustive or AI/ML. |
-| **Recommendation slot** | One storage or transportation portion of a Bundle, with its fulfilled quantity and referenced facility or vehicle. Multiple slots may be needed to cover the full request. |
-| **Booking** | Farmer’s commitment to one selected bundle; agreed prices are snapshotted and not recalculated. |
-| **Storage component** | A storage side of a booking, fulfilled by a facility/crop configuration for a portion of requested quantity. |
-| **Transportation component** | A transport side of a booking, fulfilled by a vehicle for a portion of requested quantity. |
-| **Milestone / status history** | Milestones are dated delivery points; statuses are lifecycle states. They are distinct concepts. Milestone and transition details must follow the accepted lifecycle decision when complete. |
-| **Review** | A rating/review associated with one fulfilled component. Reviews are optional and do not affect V1 ranking. |
+- **Service request** — one crop, one quantity, and exactly one of three supported service types: storage-only, transport-only, or storage plus transport. Quantities use units appropriate to the product or service (for example, kg or ton); there is no universal unit. Each quantity/capacity comparison must use compatible units; physical unit-definition representation is unresolved.
+- **Recommendation** — persisted, expiring, ranked complete alternative. Each Recommendation independently meets the whole requested quantity:
+  - Storage-only: exactly one cold-storage facility capable of storing the full requested quantity for the full requested storage period; no vehicle.
+  - Transport-only: exactly one vehicle capable of handling the full requested quantity; no facility.
+  - Storage plus transport: exactly one facility and exactly one vehicle, each capable of the full requested quantity; the facility covers the full requested storage period.
+  - When both resources are used, they may have different Provider owners.
+  - Multiple Recommendations are alternative complete solutions and are never combined. No quantity slots, split fulfillment, multiple facilities, or multiple vehicles per Recommendation.
+- **Booking** — commitment to one selected complete Recommendation, for one crop and quantity, with agreed prices snapshotted. Storage dates, where applicable, follow the approved inclusive calendar-day rule.
+- **Booking fulfillment** — follows the selected Recommendation's service type: storage-only has exactly one facility and no vehicle; transport-only has exactly one vehicle and no facility; combined service has exactly one of each. Every selected resource covers the full requested quantity; the facility and vehicle may have different Providers. Storage capacity eligibility/allocation uses the same requested storage period and inclusive calendar-day interpretation from recommendation through booking. In accepted dispute/finance rules, a service component means either fulfillment aspect; this does not require a separate generic component entity. Do not model repeated fulfillment slots or multiple child components of the same service type.
+- **Basic booking/fulfillment status** — retain only the basic status vocabulary already in architecture/API docs. The complete lifecycle and expanded deadlines in issue #15 are deferred beyond V1. ADR-0009's provider-failure replacement and pricing/refund policy remains approved; detailed replacement-attempt structure is not modeled here.
+- **Review** — optional rating of a fulfilled component; no review-based ranking in V1.
 
-The recommendation records both the complete bundle and its constituent slots. A booking may have multiple storage and/or transportation components; a single parent booking is not limited to one child of each type.
+Matching is deterministic. Eligibility precedes ranking. Storage has no service-area gate. Transport checks the individual vehicle's circular service area. Route feasibility is a separate binary signal; distance is a ranking factor, not a universal hard gate.
 
 ### Payments, disputes, and academic finance
 
-| Entity/concept | Responsibility and confirmed boundary |
-|---|---|
-| **Payment attempt** | Durable record of an attempt through a supported sandbox provider, with integer poisha amount and provider/reference/status/timing data. Verification is authoritative; redirects alone do not establish success. Payment attempt status does not change booking lifecycle. |
-| **Dispute** | Challenge to one component that has reached its completion milestone. It holds only that component’s unpaid provider payable; it does not itself reverse completed status under the approved late-dispute rule. |
-| **Dispute response/evidence/history** | Preserves provider response, optional evidence, review/decision and history. Providers may respond but cannot resolve disputes. |
-| **Refund record** | Component-scoped academic workflow calculated from delivered value and booking snapshots. Submission and confirmation are distinct simulated actions; no production refund is sent. |
-| **Commission configuration/snapshot** | Percentage rate by provider and service, including explicitly recorded negotiated exceptions; the applicable rate is snapshotted when booking price is agreed. |
-| **Ledger entry** | Immutable academic financial event. Corrections are compensating entries, not edits. Entries model events and balances, not custody or real funds. |
-| **Provider ledger / modeled balance** | Per-provider academic record of Pending and Available modeled amounts and adjustments. Pending is non-withdrawable; Available is not cash or a claim on held money. |
-| **Settlement hold / modeled settlement** | Represents eligibility, hold, and approved modeled state transitions. No payout instruction or actual settlement occurs. |
-| **Withdrawal request** | Provider request for a simulated workflow from modeled Available balance; authorized admin approval is required before the modeled outcome is marked settled. No external transfer occurs. |
-| **Penalty / appeal** | Penalty is an assessed modeled receivable only after applicable review. Provider appeal has its own status/history; pending appeal pauses simulated collection. Waivers, reductions, and collections are compensating/auditable entries. |
-| **Installment / extension request / overstay record** | Storage-booking-only academic workflows under ADR-0010. Collection is simulated; overstay and deemed return do not imply physical return or real debt collection. |
+- **Payment attempt** — one-time sandbox attempt using bKash Tokenized Checkout or SSLCommerz Hosted Checkout. Initiation is authenticated and ownership is validated; the attempt stores the approved merchant/provider references, amount, currency, status, and timestamps. Provider callbacks are correlated to the durable attempt and verified authoritatively against its references and payment facts. The exact persisted relationship to the initiating User and to the payment obligation remains unresolved; no direct Booking relationship is approved. An attempt/callback does not itself change booking or finance state.
+- **Dispute / response / evidence / decision history** — one completed component per dispute, with provider response/evidence and reasoned decision/history. It holds only that component’s unpaid modeled provider amount. A late Support-filed dispute does not undo Completed.
+- **Refund** — component-scoped internal simulated workflow. No production refund endpoint is called.
+- **Commission configuration/snapshot; Ledger entry; Provider ledger/modeled balances; settlement hold; modeled settlement; withdrawal request; penalty and appeal; installment/extension/overstay records** — persisted academic workflows under ADR-0008/0009/0010. Ledger entries are immutable; corrections use compensating entries. Pending and Available are modeled balance concepts; whether their current totals are derived from ledger entries or persisted separately is not decided.
 
-No licensed custodian, Trust Cum Settlement Account, real-money payable, live refund, or actual payout entity is part of this project’s approved model.
+Under ADR-0015, applicable booking/down-payment obligations, subsequent storage installments, simulated penalty collections, and other applicable customer payment obligations use one-time sandbox attempts. No recurring provider agreement, live debit, actual collection, custody, refund, withdrawal, or settlement transfer is permitted. Refunds, provider withdrawals, and settlements remain internal simulations. The owning domain workflow records modeled outcomes after verified attempt results; Payment does not mutate domain state.
 
-### Platform operations and communication
+### Platform and communication
 
-| Entity/concept | Responsibility and confirmed boundary |
-|---|---|
-| **Feature flag** | Controls feature availability, not authorization. An operation requires both the feature condition and permission. Flag keys are unique and immutable; archive is permanent, disables the flag, reserves its key, and retains overrides which are ignored. |
-| **Feature-flag override** | Applies only to approved global/custom-role/provider/user scopes. Provider scope targets the User ID and affects provider-side availability only. Maintenance mode is global-only. This is distinct from Permission assignment. |
-| **Platform setting** | Approved configurable policy value. Effective values are snapshotted at the process point specified by the owning policy. Do not add unapproved settings or policies. |
-| **Audit event** | Centralized append-only record for approved authorization changes, administrative state changes, and specified sensitive reads. A required audit write shares the transaction with a state change; a sensitive-read audit occurs before returning data. |
-| **Notification** | Persisted user message; persistence precedes optional live delivery. A request-scoped live channel for recommendations is distinct from the per-user notification channel. |
-| **Job** | Deferred work such as expiry sweeps, retention, notification delivery, and approved academic simulations. It must not block the triggering request. |
-| **Idempotency record** | Supports idempotent create/payment operations per approved API/ADR requirements. Exact endpoint-specific payload and relationship details follow the corresponding contract. |
+- **Feature flag / override** — availability only, distinct from permission. Regular flags support global/custom-role/provider/user scopes and approved precedence; provider scope targets the User ID. Maintenance mode is global-only. Archival permanently disables/reserves the key and retains ignored overrides.
+- **Platform setting** — only approved policy values; snapshot at the point specified by the policy.
+- **Central audit event** — single append-only recording/retrieval boundary for required authorization changes, administrative state changes, and specified sensitive reads. Required state-change audit is in the same transaction; sensitive-read audit precedes returning protected data.
+- **Notification / request live channel / Job / Idempotency record** — keep persisted notifications, separate live request room, deferred work, and approved idempotency behavior.
 
-## 3. Proposed relationships and cardinalities
+## 3. Confirmed relationships and cardinalities
 
-Cardinalities below are conceptual. **Confirmed** marks relationships required by decisions; **proposed** identifies a clean logical representation whose exact physical form remains open. Optionality can depend on lifecycle state and must not be interpreted as permitting an invalid business state.
-
-| Relationship | Cardinality / rationale | Status |
+| Relationship | Cardinality / constraint | Status |
 |---|---|---|
-| User — profiles | One User may have zero or more Farmer/Provider profiles; each profile belongs to one User. Profiles do not imply permissions. | Confirmed domain rule; profile subtype details are a model choice. |
-| User — Sessions — refresh-token records | One User has many Sessions; one Session has token history; refresh-token record references its Session. Verification/reset tokens belong to a User and need not reference a Session. | Confirmed, ADR-0011. |
-| User — contact history | One User has many historical contact records. Current contacts remain on User; historic contacts do not establish identity. | Confirmed, ADR-0011. |
-| User — direct permission assignment — Permission | A User may have many direct assignments; each references one catalog Permission and stores ALLOW or DENY. | Confirmed, ADR-0003. |
-| User — role membership — Role — role-permission assignment — Permission | Many-to-many through explicit assignment records. This separates membership from permission grants and supports editable permission collections. | Confirmed, ADR-0003; `10` is incomplete. |
-| User — Service application | One initial application per User; later capability additions are separate support-mediated requests linked to original application history. | Confirmed, ADR-0005. Exact representation of later request history is a model choice. |
-| Service application — capability requests | One application contains one or more independently decided capability requests. Each decision is for one capability. | Confirmed, ADR-0005. |
-| Capability request — evidence/review history | Evidence and review attempts attach to the capability request and preserve prior submissions/decisions. | Confirmed need; evidence granularity and record split are proposed. |
-| Provider capability — resources | A capability may relate to multiple resources; each resource requires its own verification and is not listed until both gates pass. | Confirmed rule; whether capability-resource relation is stored explicitly or derived from owner/capability is unresolved. |
-| Provider profile — facilities/vehicles | A provider may own multiple facilities and vehicles; each belongs to its provider. | Confirmed domain structure. |
-| Vehicle — service area | One vehicle has one circular declared service area in V1. A service area belongs to exactly one vehicle. | Confirmed, ADR-0002. |
-| Facility — facility crop config — Crop | Facility and Crop have a many-to-many relationship through one config per facility/crop pair. | Confirmed, ADR-0001 and `10`; storage compatibility is config existence. |
-| Facility crop config — storage allocations | One config has many dated allocations. Each allocation consumes that config’s capacity for a period and relates to its storage component. | Confirmed capacity model; transaction/locking rules in `01`/ADR-0007. |
-| Vehicle — availability blocks | A vehicle has many dated blocks; a booking component may be associated with a block. Manual blocks need not identify a booking. | Confirmed in `10`; exact status/association follows lifecycle. |
-| Farmer profile — farm locations | One farmer profile may have multiple reusable locations; each location belongs to one farmer profile and stores its address and geographical coordinates. General profile/contact information remains separate. | Confirmed; farm-specific location data is not duplicated in the User Profile. |
-| Service request — Crop / farm location | Each request references one Crop and one Farmer location and records one requested quantity in a product- or service-appropriate unit. | Confirmed, ADR-0001 and glossary. There is no universal quantity unit; physical unit-definition representation is not specified. |
-| Service request — bundle recommendations | One request may produce multiple persisted, expiring Bundle recommendations. | Confirmed, ADR-0001. |
-| Bundle recommendation — recommendation slots | One bundle contains one or more slots; each slot describes a portion and one storage or transport resource. Combined slots must cover the requested quantity in full. | Confirmed domain rule; table/slot type design proposed. |
-| Recommendation slot — facility or vehicle | A storage slot identifies a facility/crop config; a transport slot identifies a vehicle. One slot must not ambiguously identify both. | Confirmed slot meaning; use of separate subtype records vs nullable references is a modeling choice. |
-| Booking — Service request / selected Bundle | A booking belongs to one request and commits to one selected complete Bundle. | Confirmed, ADR-0001/glossary. Exact persistence link to bundle is expected but schema representation is proposed. |
-| Booking — storage/transport components | One booking may contain multiple storage components, multiple transport components, either type absent where not requested. Each component is fulfilled independently by one provider/resource and has its own status/milestones. | Confirmed, ADR-0001 and glossary; lifecycle constraints remain subject to #15. |
-| Component — capacity/availability commitment | Each storage component consumes the appropriate facility-crop allocation; each transport component reserves the relevant vehicle availability. | Confirmed concept; exact timing and transitions partly dependent on #15. |
-| Component — milestones / status history | Component has dated milestones distinct from status; status transitions have history. | Confirmed distinction; exact states/transitions unresolved under #15. |
-| Component — dispute | A dispute concerns exactly one component; a component may have dispute history, with active-dispute uniqueness/state rules from the accepted dispute decision. | Confirmed issue #8 outcome; precise uniqueness/history representation is proposed. |
-| Dispute — responses/evidence/decisions | One dispute may have provider responses and evidence, and reasoned resolution/history records. | Confirmed concepts from issue #8; precise cardinality/append-only details should follow that outcome and lifecycle. |
-| Component — refund | Refund evaluation/outcome is component-scoped; multiple records/events may be needed to preserve simulated workflow history. | Confirmed scope; whether one refund aggregate with transition history or multiple refund cases is unresolved. |
-| Provider/service — commission rate and exception | Configuration may specify a provider/service rate and explicit negotiated exception; booking snapshots the effective rate. | Confirmed ADR-0008; precedence/uniqueness and physical representation are implementation details not fixed here. |
-| Ledger entry — affected provider / financial reference | Entries identify modeled financial event and relevant provider/component/payment references as applicable. Corrections are new entries. | Confirmed append-only semantics; exact reference shape and balance derivation are unresolved implementation details. |
-| Provider ledger — entries / modeled balances | Provider-level modeled ledger aggregates entries into Pending/Available concepts; no custodial account is implied. | Confirmed ADR-0008; whether balances are derived or separately persisted is unresolved. |
-| Settlement hold — component/provider amount | Hold is tied to a component’s modeled provider share, with effective duration captured when it begins. | Confirmed ADR-0008; physical record cardinality can follow #21. |
-| Withdrawal request — provider / settlement outcome | Provider requests a simulated withdrawal; admin approval precedes its modeled settled outcome. | Confirmed ADR-0008 and #21; exact state/history model is not specified here. |
-| Penalty — appeal / ledger entries | A penalty can have appeal history and associated compensating ledger entries; simulated collection is recorded without actual collection. | Confirmed ADR-0009/#22; one-to-many/event representation is a model choice. |
-| Payment attempt — User / other business record | Authenticated initiation requires verifiable ownership and callbacks need correlation, but the target relation is not decided. | **Unresolved** under ADR-0006 and #19. See §6. |
-| Feature flag — overrides | A flag may have global default and approved scoped overrides. Custom-role, provider (User ID), and user scopes apply to regular flags; maintenance mode is global-only. | Confirmed issue #10. Override rows must not be modeled as permissions. |
-| Audit event — actor / target | Event has an actor where applicable and polymorphic target type/id; target is not necessarily a database FK. State-changing events include relevant before/after values. | Confirmed ADR-0013; exact storage shape is a model choice. |
-| User — notifications | A User may receive many persisted notifications; related entity is optional and polymorphic. | Confirmed glossary/architecture; logical reference is not necessarily an FK. |
+| User–Farmer profile; User–Provider profile | Each profile belongs to one User; one User may have both or neither. | Confirmed; subtype table layout proposed. |
+| Provider–Storage facilities | One Provider owns zero or more; each Facility has exactly one Provider owner. | Confirmed, ADR-0014. |
+| Provider–Vehicles | One Provider owns zero or more; each Vehicle has exactly one Provider owner. | Confirmed, ADR-0014. |
+| Provider–capability requests | One account may request/hold both capabilities; decisions are independent. | Confirmed, ADR-0005/0014. |
+| Facility/Vehicle–Resource verification | Each individual resource has its own verification decision/history. | Confirmed, ADR-0005/0014. |
+| Resource–pending update | A reviewed proposal does not replace the active approved details until approved. | Confirmed behavior; representation proposed. |
+| Vehicle–service area | One circular area per vehicle in V1. | Confirmed, ADR-0002. |
+| Facility–Crop | Many-to-many via one facility-crop configuration per pair. | Confirmed, ADR-0001 and compatible schema detail. |
+| User–Roles–Permissions | Many-to-many through user-role and role-permission assignments; direct user ALLOW/DENY assignments also exist. | Confirmed, ADR-0003. |
+| Application–capability decisions | Initial application includes one or both independent requested capabilities; later additions link to original history. | Confirmed, ADR-0005. Physical nesting proposed. |
+| Farmer–Farm location | One Farmer may own zero or more reusable Farm locations; each location belongs to exactly one Farmer and stores farm address/coordinates. | Confirmed; farm-specific location data is not duplicated in the general User Profile. |
+| Request–Farm location/Crop | Each request references one Crop and one Farm location owned by that Farmer. | Confirmed. |
+| Service request–service type | Exactly one of storage-only, transport-only, or storage plus transport. | Confirmed by user decision. |
+| Request–Recommendations | One request may have multiple complete alternative recommendations. | Confirmed, ADR-0014. |
+| Recommendation–facility / vehicle | Storage-only: exactly one facility and no vehicle. Transport-only: exactly one vehicle and no facility. Combined: exactly one of each. Every selected resource covers the full requested quantity. Physical table name: `recommendations`. | Confirmed by user decision, ADR-0014, and naming decision. |
+| Booking–Recommendation | One Booking commits to one selected Recommendation. | Confirmed. Reverse cardinality not fixed beyond booking selection. |
+| Booking–storage fulfillment | Exactly one for storage-only or combined service; none for transport-only. Uses one facility for the full requested quantity. | Confirmed by user decision and ADR-0014. |
+| Booking–transport fulfillment | Exactly one for transport-only or combined service; none for storage-only. Uses one vehicle for the full requested quantity. | Confirmed by user decision and ADR-0014. |
+| Storage fulfillment–facility-crop config / allocation | One selected config and a dated capacity allocation covering the same inclusive storage period used by the Recommendation and Booking. | Confirmed inclusive-day rule; physical FK/index shape proposed. |
+| Transport fulfillment–Vehicle / availability block | One selected Vehicle and its applicable time block. | Confirmed; physical FK/index shape proposed. |
+| Component–Dispute | Each dispute concerns exactly one component. | Confirmed issue #8 decision. |
+| Provider/service–commission configuration | Centrally managed percentage rate per provider and service, with explicitly recorded negotiated exceptions; applicable rate is snapshotted when booking price is agreed. | Confirmed, ADR-0008/#4. Uniqueness and exception precedence are unresolved. |
+| Provider ledger–entries / modeled balances | Ledger entries are immutable and append-only; Pending and Available totals may be derived from entries or persisted separately. | Immutable entries confirmed; balance representation unresolved. Simpler derivation is proposed, not approved. |
+| Feature flag–overrides | Approved scopes only; archive retains but ignores override rows. | Confirmed issue #10. |
+| Audit event–actor/target | Central event with actor where applicable and target type/id; target may be polymorphic. | Confirmed ADR-0013; physical shape proposed. |
+| PaymentAttempt–initiating User | Payment initiation is authenticated and ownership must be validated; whether the durable attempt stores a direct User FK or another ownership reference is not specified. | Behavior confirmed; persistent relationship unresolved by ADR-0006/#19. |
+| Provider callback–PaymentAttempt | Correlate callback/return/IPN to the durable attempt using its stored provider/merchant references, then verify authoritatively. | Confirmed behavior, ADR-0006 and #19; exact schema/index details remain implementation choices. |
+| PaymentAttempt–payment obligation / Booking | No direct Booking FK, polymorphic target, or other obligation association is approved. The owning domain workflow consumes the verified attempt result without Payment directly mutating booking/finance state. | Unresolved by ADR-0006/#19 and ADR-0015. |
 
-## 4. Required constraints and invariants
+## 4. Required invariants
 
-These invariants are confirmed requirements, not suggestions to encode every rule as a database constraint. Which belong in database constraints versus owning-module services remains subject to `.ai/04` and implementation review.
+- Permission authorization is independent of profile, capability, verification, resource status, and feature availability.
+- No fixed account type, authority from role names, provider-scoped permissions, or shared/transferable resource ownership.
+- One resource has exactly one Provider owner; an account can own multiple facilities/vehicles and offer both capabilities.
+- Incomplete, unverified, suspended, or deactivated resources receive no new requests. Accepted bookings are not automatically cancelled by resource suspension/deactivation.
+- During a reviewed resource update, prior approved details remain effective until approval; rejection preserves those details.
+- A storage-only Recommendation uses exactly one full-quantity facility and no vehicle; a transport-only Recommendation uses exactly one full-quantity vehicle and no facility; a combined Recommendation uses exactly one of each, each covering the full quantity. Recommendations are never combined.
+- A Booking commits to one complete Recommendation and has fulfillment cardinality determined by its service type: one facility, one vehicle, or one of each. No fulfillment is split across multiple resources. Capacity remains transactionally protected under existing storage rules.
+- V1 lifecycle design stays basic; issue #15's expanded replacement/deadline state machine is deferred. ADR-0009's approved replacement policy remains in force for applicable academic refund calculations.
+- Sandbox attempts require authoritative verification and do not themselves mutate booking or academic finance state.
+- Financial records use integer poisha where applicable, are academic/non-custodial, and remain append-only.
+- V1 is English-only. Feature flags remain separate from permissions. Audit recording is centralized and append-only.
 
-### Identity, authorization, verification
+## 5. Proposed modeling choices
 
-- No structural account-type field or authority derived from a role name.
-- Permission catalog is curated/versioned; no global wildcard. Permissions attach only to roles and users. DENY wins; default is deny. Cross-party access requires explicit `.any` permission.
-- Email is required and verified before normal account functionality. Optional phone remains unverified and is not an authentication/recovery method in V1. Preserve contact history; do not merge accounts by historical contact match.
-- Permission, capability approval, resource verification, ordinary availability, and suspension are separate concerns. Marketplace eligibility requires all applicable gates.
-- A provider capability decision never verifies every facility/vehicle. Each facility/vehicle has its own resource verification history.
+These are logical recommendations for future physical schema review, not table/column definitions. The `recommendations` physical table name is already settled:
 
-### Supply and matching
+1. One Recommendation record with resource references matching its service type: facility only, vehicle only, or one of each. Each referenced resource must cover the full quantity. No Bundle, Slot, or repeated fulfillment entities.
+2. Represent the Booking as commitment to that Recommendation and its corresponding full-quantity fulfillment; do not add one-to-many booking components.
+3. Keep currently approved resource details as effective details; store a pending proposed update separately until review resolution. Reuse existing evidence/review history rather than adding a generic workflow framework.
+4. Keep resource verification status separate from operational `active`/`suspended`/`deactivated` status.
+5. Use one shared audit event collection with polymorphic target metadata; no module-specific audit stores.
+6. Keep ledger entries immutable and append-only. **Proposal for V1:** derive Pending and Available totals from ledger entries rather than persist duplicate aggregate totals. This is the simpler approach for the academic project; it is not an approved decision. Alternatively, persist balance totals separately and maintain consistency with the immutable ledger, which adds synchronization and reconciliation responsibility.
+7. Keep authenticated initiation, ownership validation, durable-attempt callback correlation, and authoritative verification as confirmed behavior. Do not invent the persistent initiating-User relationship or a Booking/obligation association; their exact schema relationships remain unresolved.
 
-- `vehicle_service_areas` are vehicle-owned; V1 has one circular declared area per vehicle. Storage has no service-area/radius filter.
-- A `facility_crop_config` establishes facility/crop compatibility. Storage eligibility includes crop compatibility, facility status, availability/capacity, and route feasibility.
-- Transport eligibility is per vehicle and includes suitability, capacity, availability, that vehicle’s service area covering pickup, and route feasibility from pickup to destination.
-- Route feasibility is a binary provider result; distance is a ranking factor, not a substitute eligibility threshold. No default universal maximum distance is approved by ADR-0002.
-- Bundles cover the requested quantity in full and can have an unbounded number of slots; matching is heuristic and feasibility precedes ranking.
-- Quantities use product- or service-appropriate units; do not force a universal unit. Quantities, capacities, and fulfilled portions compared in an operation must be interpreted in compatible units.
-- Storage duration is counted using inclusive calendar days, including both start and end dates. This rule applies to storage calculations only, not unrelated services.
-- Farm addresses and geographical coordinates belong to Farm location records, not the User Profile; general profile and contact information remain separate.
-- Booking is one crop and one quantity, with one or more fulfillment components and immutable agreed-price snapshots. Capacity safety uses transactional locking per `facility_crop_configs` as described in `01` and ADR-0007.
+## 6. Resolved and unresolved matters
 
-### Lifecycle and finance
+### Resolved by approved requirements
 
-- Component status and dated milestone are distinct. Storage `Returned` is physical return; `Completed` is a separate lifecycle concept. Deemed return is not physical return.
-- Dispute scope is one component. It holds only that component’s unpaid provider payable. A late Support-filed dispute does not undo a component’s already reached Completed state.
-- Payment attempts are sandbox-only; authoritative provider verification is required. A verified attempt does not transition booking state.
-- All financial values use integer poisha where specified. Financial records are academic/simulated; ColdLink does not custody, transfer, or settle real money.
-- Ledger entries are append-only. Corrections, waivers, refunds, penalties, and settlement adjustments are represented by new auditable events/entries, not edits to prior financial history.
-- Storage installment, overstay, and extension behavior applies only to storage bookings under ADR-0010. No live recurring debit or production collection is modeled.
-
-### Platform and audit
-
-- A feature flag controls availability; permission controls authorization. Both must pass. Provider-scoped flags target a User and do not grant capability, approval, verification, or permission.
-- Archived flag keys remain reserved; overrides are retained but ignored. Maintenance mode is global-only.
-- Audit records are append-only. Required audit writes for state changes share the state-change transaction; specified sensitive reads are audited before data return and fail closed if audit recording fails.
-- V1 is English-only. Do not add translation entities or treat translated labels as identifiers/authorization values.
-
-## 5. Confirmed decisions versus modeling proposals
-
-### Confirmed
-
-The conceptual entities and rules in §2, the confirmed relationships in §3, and invariants in §4 are grounded in accepted sources listed in §8. In particular, the role, area, bundle/slot, multi-component booking, centralized audit, English-only, and sandbox/simulated-finance boundaries are not open alternatives.
-
-### Proposed modeling choices for review
-
-1. Use explicit assignment records for User–Role membership, Role–Permission grants, and direct User–Permission ALLOW/DENY assignments. This maps the approved authorization sources without confusing membership and authority.
-2. Represent each provider application’s requested capabilities as independently reviewable records; attach evidence and review attempts/history to the subject decision. This preserves the separate application, capability, and resource verification concepts without prescribing evidence file storage.
-3. Represent recommendation Bundle and Slot as separate logical records. A Slot is typed storage or transport and points to exactly one eligible resource/configuration. Physical subtype tables versus a type discriminator are not selected here.
-4. Represent Booking as a commitment to a selected Bundle, with multiple storage and transport components. Keep each component’s lifecycle and provider/resource association independent. Do not fix the final transition graph before #15.
-5. Represent shared audit events in one logical append-only collection with actor and polymorphic target references, rather than separate admin/domain audit stores. Transactional guarantees are from ADR-0013; database enforcement mechanism remains undecided.
-6. Represent feature-flag overrides separately from permission assignments and retain archived flag/override history. Do not create an authorization relationship from feature flag to permission.
-7. Model ledger entries as immutable financial events and keep the question of derived versus separately persisted balances open. Do not name modeled balances “wallet,” “cash,” or “payable” in a way that implies custody.
-
-These choices are suitable for review and future ER-level modeling, but should not be translated directly into Prisma until open matters in §6 are resolved or deliberately scoped out.
-
-## 6. Unresolved decisions and impact on the future ER diagram
-
-| Open question | Source/status | ER impact / choices not silently selected |
-|---|---|---|
-| **Complete booking/component state machine, replacements, deadlines, and actor/job transitions** | GitHub issue #15 remains open. Booking policy inputs exist across ADR-0005 and ADR-0008–0010; #15 is to consolidate lifecycle. | Do not finalize all status enums, transition history entities, replacement-attempt/offered-provider cardinalities, or exact booking-to-component lifecycle links. Issue #5 confirms a replacement offer and farmer acceptance of repriced remaining scope, but #15 must define how it integrates with the whole booking flow. |
-| **Payment-attempt owner/target relationship** | ADR-0006 and #19 explicitly leave the ownership relationship to be determined within constraints. | Candidate representations include an attempt linked directly to a User plus a separately correlated business reference, or linked to a specific payment obligation/business record where the approved flow requires it. Do not choose an FK, polymorphic target, or booking-only relation yet. Any choice must support authenticated ownership and callback correlation while keeping attempts independent of booking transitions. |
-| **Recommendation and slot physical shape** | Bundle/slot semantics are confirmed by ADR-0001, but precise schema not written. | Separate slot subtype records versus one typed slot record; precise snapshot columns and how route/cost data is allocated per slot remain modeling/implementation choices. Cardinality must still permit multiple slots and complete quantity coverage. |
-| **Provider capability/resource association** | ADR-0005 requires approved capability and independently verified resource; #1 says this relationship remains to be reconciled. | Determine whether each facility/vehicle has an explicit capability association or whether eligibility derives it from the owning provider’s active approved capability and resource type. Do not assume a many-to-many relation absent evidence. |
-| **Service application/support-mediated additions** | One initial application per User and later linked support-mediated requests are confirmed (ADR-0005). | Decide whether later additions are child requests within an application aggregate or separately addressable application records linked by an origin/history reference. Preserve the distinction and history either way. |
-| **Evidence and verification history granularity** | Independent decisions, evidence expiry, resubmission, information requests, and history are confirmed (ADR-0005). Issue #20 is closed as not planned; manual admin review requires no DAM/BRTA confirmation or regulator integration. | Decide normalized evidence-document, submission/version, review-attempt, and audit relationships during schema review. Evidence categories are admin-configurable; do not assert document types as legal requirements. |
-| **Dispute history and uniqueness** | Issue #8 decision-map outcome defines one-component disputes, one active dispute, response/evidence, resolution, and reopen conditions. #15 remains open for lifecycle integration. | Model dispute scope as one component, but confirm whether reopen creates a new case/history entry and how prior decisions are represented before fixing uniqueness and cardinalities. |
-| **Refund case vs refund event structure** | ADR-0009/#22 defines component-scoped simulated refund states, submission distinct from confirmation, and immutable financial corrections. | Choose a refund aggregate with transition history versus separate refund-attempt/event records; ensure multiple component adjustments and audit/ledger links can be preserved. No live-provider relation. |
-| **Commission and financial configuration cardinality** | ADR-0008/#21 confirms provider/service rates, explicit negotiated exceptions, snapshots, and integer arithmetic. | Decide rate uniqueness/exception representation and whether balance snapshots are persisted or calculated from append-only entries. No commercial rate/default may be invented. |
-| **Penalty repeated-cancellation policy storage** | ADR-0009/#22 approves configurable count/window by provider and service capability, manual review, rate/cap snapshots, appeals, and simulated collections. | Configuration/history and candidate-flag representation remain to be designed within approved policy. A threshold event is not itself a violation or penalty. |
-| **Settings catalog and snapshots** | ADR-0001, ADR-0008–0010 define some values and snapshot moments; the decision map lists a concrete settings catalog/default reconciliation as outstanding. | Do not add settings beyond established policies. Confirm each effective value’s owner, default, capture point, and any schema snapshot before depicting a settings relationship as settled. |
-| **Feature-flag archival field and overrides** | Issue #10 settles global/custom-role/provider/user behavior, precedence, maintenance mode, permanent archive, retained-but-ignored overrides. | Logical archive state is required, but physical representation (status/timestamp) is not selected. Ensure provider scope identifies the User, not a provider permission scope; maintenance has no scoped overrides. |
-| **Shared records and audit physical shape** | ADR-0013 confirms centralized ownership, append-only behavior, transactional consistency, event fields; final schema/enforcement mechanism remains open. | Choose concrete event table fields, target reference strategy, before/after representation, and integrity enforcement during schema review. Do not infer a DB trigger, separate database, or tamper-evidence mechanism. |
-| **Recommendation table naming** | `10` S1 explicitly undecided: `recommendations` vs `service_recommendations`; ADR-0001 uses `service_recommendations` in its consequence text. | Canonical domain term is **Recommendation**; the physical table name remains open. Resolve in documentation/schema reconciliation, not by assuming table name from prose. |
-| **Quantity unit representation** | The requirement is decided: use units appropriate to the product or service; no universal unit. | Do not force a universal unit. Exact physical representation of unit definitions is not specified by this decision and remains a schema-design detail. |
-| **Storage date counting** | Decided: storage duration counts inclusive calendar days, including both endpoints. Applies to storage calculations, not unrelated services. | Apply consistently to storage-duration calculations; do not extend to other services. |
-| **Farm location versus User Profile fields** | Decided: Farm location records contain farm addresses and geographical coordinates; do not duplicate farm-specific location data in User Profile. | Keep general profile/contact information separate and store farm-specific location data on Farm location records. |
-| **Legal evidence requirements** | Issue #20 is closed as not planned. Manual admin review does not obtain DAM/BRTA confirmation or assert document types as legal requirements; no regulator integration. | Keep evidence categories admin-configurable at the approved level; do not encode legal-specific mandatory constraints. |
-| **Predefined role seed and mutability** | ADR-0003 and glossary establish predefined editable roles (`user`, `admin`, `farmer`, `provider`, `staff`) and the `user` registration baseline. | Seed these as editable permission collections. Authorized administrators manage roles and their explicit permission assignments; names never grant authority and must not be used in authorization checks. |
-
-The first two questions—#15 lifecycle and payment-attempt ownership—materially affect the future ER diagram and should be resolved or explicitly shown as unresolved before a final diagram is approved.
-
-## 7. Document-by-document reconciliation list
-
-This is a proposed change list only. No other document is changed by this task.
-
-| Document | Conflict or gap | Recommended update |
-|---|---|---|
-| `CONTEXT.md` | Role glossary must distinguish predefined editable permission collections from fixed account types. | Keep as vocabulary authority; state that starter role names carry no authority. Preserve the legacy enum as superseded, not editable role records. |
-| `.ai/10-DB-SCHEMA.md` | Explicitly legacy/incomplete; contains `users.role`, structural role examples, provider service areas, one facility/vehicle per recommendation, one child component of each type, and incomplete authorization/finance/onboarding/audit records. | Replace/reconcile the planning model against approved decisions. Resolve remaining S1 and the relationships in §6; carry the settled quantity-unit, storage-day, and farm-location decisions into the schema. Label any still-open schema elements. Do not use as implementation contract until reviewed. |
-| `.ai/01-architecture.md` | Module list and interaction narrative do not fully show the accepted bundle/slot, multi-component, application/verification, disputes/academic finance, audit boundary, and feature-flag decisions in one reconciled model. | Align module ownership and examples with accepted ADRs and this model; preserve payment independence and audit ownership. Correct any legacy radius, single-resource, role, or finance language. |
-| `.ai/05-api-standards.md` | Several route/contract surfaces remain explicitly open; older examples are historical and some financial/authorization terms need harmonization. | Align API vocabulary and endpoint descriptions after #15 and schema reconciliation; do not invent routes or expose a presumed physical model. |
-| `.ai/06-module-rules.md` | Must consistently state ownership of application/verification, component finance, permissions, flags, and centralized audit; admin is a delegating entry point. | Update module ownership/boundaries to match ADR-0012/0013 and the reconciled domain model. |
-| `.ai/02-folder-structure.md` | Shared-record ownership is partly listed as undecided; roles/permission and audit ownership need to match approved architecture. | Clarify module ownership after logical relationships are approved; do not create speculative empty modules. |
-| `.ai/04-database-prisma.md` | Correctly points to `10` as contract, but that document is not ready to be a contract. | Change contract reference only after the reconciled data model is approved; retain ORM/MariaDB rules and avoid equating conceptual records with Prisma models prematurely. |
-| `.ai/09-feature-progress.md` | Design decisions and implementation status can be mistaken for one another; feature modules remain unimplemented. | Keep code-inspected status authoritative; note approved designs do not mean schema/modules are implemented. |
-| `.ai/admin-console-permission-proposal.md` | Approved permission mapping is not yet seeded and remains catalog follow-up. | Keep it as permission traceability; ensure direct assignments and role-permission grants are represented in the data model without implying implementation. |
-| `.ai/adr/0001` and `.ai/adr/0002` | ADRs explicitly say schema reconciliation was not applied; ADR-0001’s original radius point is superseded. | Preserve the decision history; add reconciliation references only when approved. Do not rewrite superseded decision history as current rule. |
-| `.ai/adr/0003` | Its “no built-in role” wording conflicts with the approved predefined editable starter roles. | Clarify seeded role names, editability, the `user` registration baseline, and explicit-permission-only authority; preserve deny-wins/default-deny and never authorize by role name. |
-| `.ai/adr/0005` | Accepted workflow requires distinct application/capability/resource records and histories, not yet reflected in `10`. Issue #20 is closed as not planned. | Use this model as a reference; provider verification is manual admin review without DAM/BRTA confirmation or regulator integration. |
-| `.ai/adr/0006` and `.ai/payment-sandbox-scope.md` | Payment-attempt ownership/precise relationship remains open by design. | Keep the constraint and record the eventual decision separately; do not imply booking lifecycle ownership by Payment. |
-| `.ai/adr/0008`, `.ai/adr/0009`, `.ai/adr/0010` | Approved simulated financial workflows are only partially represented in `10`; implementation tracked in #21–23. | Reconcile entity/history relationships while preserving simulation-only boundaries and each policy’s scope. |
-| `.ai/adr/0012` and `.ai/adr/0013` | Accepted admin/audit decisions require bounded operations and centralized audit; schema still has provisional `admin_action_logs`. | Align `10` and architecture with shared audit ownership and transactional behavior; no audit implementation mechanism is selected. |
-| GitHub issue #1 decision map | Contains historical conflicting money movement/provider choice and role wording alongside current decisions. | Keep closed decision outcomes/ADRs as authority; when future issue updates occur, clearly mark superseded statements and link the controlling decision. |
-| GitHub issue #15 | Open; lifecycle needed to complete booking/component schema. | Resolve before freezing component states, replacement relationships, and lifecycle-history details. |
-| GitHub issue #19 | Open sandbox integration; attempt ownership still unresolved within accepted bounds. | Decide and record the minimum ownership/correlation relationship during #19 design/implementation, with no booking-state side effect. |
-| GitHub issues #20–23 | #20 is closed as not planned; #21–23 track academic finance implementation. | Use issues as boundary/acceptance traceability; do not treat open implementation tasks as implemented schema. |
-
-## 8. Traceability matrix
-
-| Modeling decision / constraint | Source of authority |
-|---|---|
-| User has no fixed account type; predefined editable roles are permission collections and profiles do not grant authority | `CONTEXT.md` §§Identity and access; ADR-0003; issue #9 decision outcome |
-| Roles are editable permission collections; permission catalog, role grants, memberships, direct ALLOW/DENY assignments; no provider-scoped permissions; deny-wins/default-deny | ADR-0003; issue #9; `.ai/admin-console-permission-proposal.md` |
-| Verified email, multiple sessions, refresh-token rotation, unverified optional phone, contact history | ADR-0011; issue #13; `CONTEXT.md` |
-| Separate service application, independent capability decisions, resource verification, evidence/history | ADR-0005; closed issue #7; issue #20 closed as not planned; manual admin review only |
-| Facility-crop config establishes crop compatibility; per-crop capacity/price | ADR-0001; `.ai/00-PROJECT_OVERVIEW.md`; `.ai/10-DB-SCHEMA.md` where consistent |
-| Vehicle owns its circular service area; no provider-level area and no storage radius | ADR-0002; `CONTEXT.md` §§Supply and Superseded |
-| Service request is one crop/quantity; multiple fulfillment slots; heuristic feasible bundles; bundle and slot persistence | ADR-0001; glossary §§Demand and matching; `.ai/00-PROJECT_OVERVIEW.md` |
-| One booking can have multiple storage/transport components; price snapshots | ADR-0001; glossary §§Booking lifecycle; open issue #15 for complete transitions |
-| Booking state machine and replacement/deadline transitions remain open | GitHub issue #15 (OPEN); do not infer final cardinalities/states from draft `01` or `10` |
-| Payment attempts sandbox-only, integer poisha, authoritative verification, no booking transition | ADR-0006; closed design #19 scope/`.ai/payment-sandbox-scope.md`; glossary §§Money |
-| Payment-attempt ownership/correlation relation remains unresolved | ADR-0006 consequences; issue #19; decision map #1 outstanding items |
-| Component-scoped dispute, responses/evidence, hold isolation, late-dispute behavior | Closed issue #8 decision outcome; glossary §Dispute; ADR-0012 for admin operations |
-| Academic commission, immutable ledger events, Pending/Available modeled balances, simulated withdrawal/settlement | ADR-0008; issue #4 closed policy and #21 implementation scope; glossary §§Money |
-| Simulated component refunds, provider penalties, appeals and compensating entries | ADR-0009; issue #5 closed policy and #22 implementation scope |
-| Storage-only installments, overstay, deemed return, extensions and snapshots | ADR-0010; issue #6 closed policy and #23 implementation scope |
-| No real custody, settlement, payout, live refund, or production payment processing | `CONTEXT.md` §§Money/Superseded; ADR-0006/0008/0009/0010; `.ai/00-PROJECT_OVERVIEW.md` |
-| Feature flags are separate from permissions; approved scopes, precedence, archival and global-only maintenance | Closed issue #10; glossary §Feature flag; architecture `01` §Authorization and feature flags |
-| Centralized append-only audit boundary; transactional writes and fail-closed sensitive reads | ADR-0013; ADR-0012; issue #11 closed outcome; glossary §Audit log |
-| Persisted notifications, separate live request channel, deferred jobs | ADR-0001; architecture `01` §§Module interaction/Background jobs; glossary §§Platform operations |
-| V1 English-only; translations deferred | ADR-0010 (`english-only-v1`); `.ai/00-PROJECT_OVERVIEW.md`; `CONTEXT.md` |
-| Schema is planning-only and conflicts must be reconciled before implementation | `.ai/10-DB-SCHEMA.md` warning and introduction; `.ai/09-feature-progress.md`; actual `backend/prisma/schema.prisma` scaffold |
-
-## 9. Review summary
-
-### Reconciled in this proposal
-
-- Removed legacy structural-role interpretation while retaining predefined, editable permission collections and the approved `user` baseline role; role names never grant authority.
-- Replaced provider-level service area with vehicle-owned circular service area.
-- Reframed recommendation persistence as Bundle plus multiple fulfillment Slots and booking fulfillment as multiple independently fulfilled components.
-- Added the approved logical concepts for onboarding/verification, disputes, simulated finance, payment attempts, feature-flag archival, and shared audit recording.
-- Preserved English-only V1, separated authorization from verification/eligibility, and kept payment/finance simulation-only.
+- **Request types and recommendation cardinality:** storage-only uses exactly one full-quantity facility; transport-only uses exactly one full-quantity vehicle; combined uses exactly one of each, each covering the full quantity. Alternatives are never combined.
+- **Provider ownership:** one owner per resource, multiple resources per provider, no sharing or transfers; one account may offer both capabilities.
+- **Resource update and status:** staged reviewed updates preserve approved details; active/suspended/deactivated status is separate; existing bookings continue; reactivation alone adds no verification.
+- **Quantity and location:** use compatible product/service units with no universal unit; farm addresses/coordinates belong to Farm location, not User Profile.
+- **Storage duration:** inclusive calendar-day counting for storage calculations only.
+- **Legal evidence:** issue #20 closed as not planned; manual admin review with configurable categories and no legal assertions/regulator integration.
+- **Baseline roles:** editable seeded permission collections, with `user` as registration baseline; no role-name authority.
+- **Feature flags:** archive semantics and approved scope/precedence are defined in issue #10; physical archive field remains a schema choice.
+- **Recommendation table name:** physical table name is `recommendations`; canonical domain term is Recommendation.
+- **Issue #15:** expanded state-machine scope is deferred beyond V1; basic statuses remain.
 
 ### Still unresolved
 
-- Issue #15’s complete lifecycle and replacement/timeout relationships.
-- Payment-attempt ownership/correlation relationship.
-- Bundle-slot/component physical shape; capability-resource association; evidence/review record granularity; finance history/balance representation; settings catalog; archive/audit physical representation; schema decision S1 in `10`. Quantity-unit, inclusive storage-day, and farm-location/profile separation decisions are settled; unit-definition physical representation remains unspecified.
-- Issue #20 is closed as not planned; provider verification is manual admin review with no DAM/BRTA confirmation or regulator integration.
+| Question | Impact and minimal recommendation |
+|---|---|
+| PaymentAttempt ownership and obligation association | Authenticated initiation, ownership validation, durable callback correlation by stored references, and authoritative provider verification are approved. The exact persisted User ownership relation and any relation to a Booking/payment obligation are not approved. Do not add a direct Booking FK or polymorphic target without approval. |
+| Resource update/evidence history shape | Staged update behavior is confirmed; separate update record versus versioned pending payload remains a physical modeling choice. Keep it simple and preserve history. |
+| Physical unit representation | No universal unit; exact enum/catalog/documented convention is not specified. |
+| Provider balance representation | ADR-0008 defines Pending/Available modeled balances and ledger-based balance transitions; #21 requires persisted ledger entries, balance transitions, and required balance/withdrawal state. Neither source selects whether current totals are derived from immutable ledger entries or persisted separately. **Proposal:** derive totals from ledger entries for simpler V1 consistency; this requires approval. The alternative is separately persisted totals maintained consistently with ledger entries. |
+| Commission configuration | Immutable ledger is approved; physical uniqueness and exception-precedence model remain open. |
+| Settings catalog | Use only values already approved by ADRs; unresolved names/defaults must not be added by inference. |
+| Feature flag archive field / audit physical shape | Semantics are approved; timestamp/status and audit FK/integrity implementation are not. |
+| Issue #15 details | Full replacement and deadline state machine remains deferred; ADR-0009's approved provider-failure replacement valuation remains in force. Do not make the expanded state machine a V1 schema blocker. |
 
-### Approval requested
+## 7. Document-by-document reconciliation
 
-Review the **proposed modeling choices** in §5 and the unresolved alternatives in §6, especially whether the conceptual structure is suitable as the basis for revising `.ai/10-DB-SCHEMA.md`. No open decision is assumed accepted by this document. No other project document, schema, migration, application code, or diagram is changed here.
+The following documents were updated in this task; see the git diff for exact edits:
+
+- `.ai/10-DB-SCHEMA.md` — replaced legacy table draft with the reconciled conceptual model, adopted the settled `recommendations` table name, and retained explicit unresolved items.
+- `CONTEXT.md` — replaced Bundle/Slot language, defined complete Recommendation and resource ownership/status/update/payment terms, and marked deferred lifecycle vocabulary.
+- `.ai/00-PROJECT_OVERVIEW.md`, `.ai/01-architecture.md`, `.ai/05-api-standards.md` — aligned matching cardinality, booking limits, provider/resource rules, basic statuses, and payment scope.
+- `.ai/04-database-prisma.md` — clarified conceptual model is not a Prisma contract.
+- `.ai/06-module-rules.md`, `.ai/11-project-schedule.md`, `.ai/12-development-strategy.md`, `.ai/09-feature-progress.md` — aligned module/grade/deferred-scope descriptions without claiming implementation.
+- `.ai/payment-sandbox-scope.md`, ADR-0006, ADR-0009, ADR-0010, `.ai/admin-console-permission-proposal.md`, ADR-0012 — clarified applicable sandbox collection attempts while preserving simulated/no-real-money boundaries.
+- ADR-0001 — retained as historical record, prominently superseded for V1 split fulfillment by ADR-0014.
+- ADR-0002 and ADR-0005 — aligned route/service-area and provider/resource verification/update/status decisions with ADR-0014.
+- New ADR-0014 — complete recommendations, provider/resource ownership, resource update/status boundaries, and basic V1 lifecycle scope.
+- New ADR-0015 — sandbox attempt applicability for V1 obligations, no direct domain side effects, and unresolved attempt association.
+
+GitHub issue bodies #15, #19, and #23 were inspected but not edited. They remain historical/tracker records; their implementation scope should be reconciled separately before they are used as current acceptance criteria where their wording conflicts with ADR-0014/0015.
+
+## 8. Traceability matrix
+
+| Decision | Source |
+|---|---|
+| All three complete non-split request types: storage-only uses exactly one full-quantity facility; transport-only uses exactly one full-quantity vehicle; combined uses exactly one of each, each covering the full quantity | Current user decision; ADR-0014; ADR-0001 marked historical/superseded |
+| One provider owner per resource; multiple facilities/vehicles; no sharing/transfer; both capabilities allowed | ADR-0014; ADR-0005 |
+| Capability application and resource-specific verification/evidence history | ADR-0005; issue #7; ADR-0014 |
+| Resource staged updates and active/suspended/deactivated behavior | ADR-0014; approved current requirement |
+| Vehicle-owned circular area; no storage radius; route feasibility separate | ADR-0002; glossary |
+| Roles, membership, role grants, direct ALLOW/DENY; no role-name authority | ADR-0003; issue #9; glossary |
+| Sandbox attempts required for applicable booking/down-payment, installment, penalty, and other customer obligations; no real funds | ADR-0015; ADR-0006; ADR-0008–0010; issue #19 sandbox adapter decision |
+| Authenticated initiation, ownership validation, durable-attempt callback correlation, and authoritative verification; Payment does not mutate domain state | ADR-0006; ADR-0015; issue #19 |
+| Exact persisted initiating-User relation and payment-obligation/Booking association remain unresolved; no direct Booking FK or polymorphic target approved | ADR-0006 consequences; ADR-0015 decision 6; issue #19 |
+| Immutable academic ledger and modeled Pending/Available transitions; no approved choice between derived and separately persisted balance totals | ADR-0008; ADR-0009; GitHub issue #21 implementation criteria |
+| Component-scoped disputes and isolated modeled hold | Closed issue #8; glossary; ADR-0012 |
+| Central append-only audit | ADR-0013; ADR-0012 |
+| Feature flags separate from permissions; scopes, precedence, archival | Closed issue #10; glossary |
+| Basic V1 statuses; full lifecycle deferred | ADR-0014; issue #15 (open/deferred) |
+| Inclusive storage-day calculation; unit-appropriate quantities; Farm location owns farm address/coordinates | ADR-0001 and ADR-0009; `.ai/10-DB-SCHEMA.md` resolved decisions; glossary |
+| English-only V1; no translation tables | ADR-0010; glossary |
+| No asserted legal document checklist or regulator integration | ADR-0005 amendment; issue #20 closed as not planned |
+
+## 9. Verification boundary
+
+This reconciliation changes documentation only. It does not implement matching, resource registration, verification, payment processing, booking lifecycle, finance workflows, Prisma models, or migrations. Final physical schema/ER design must preserve the confirmed cardinalities above and leave unresolved matters visibly unresolved until approved.
