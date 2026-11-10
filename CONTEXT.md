@@ -77,7 +77,7 @@ The single centralized mechanism that evaluates a user's effective permissions a
 _Avoid_: role check, per-module permission check, token claims
 
 **Platform Admin**:
-A user holding the permissions needed to administer the platform. It is not a built-in role or account type.
+A user holding the permissions needed to administer the platform. It is not a built-in role or account type; other users may perform specific administrative operations when explicitly granted the relevant permissions.
 _Avoid_: superuser type, inherent admin role
 
 **Feature flag**:
@@ -195,6 +195,10 @@ _Avoid_: completed, released
 **Completed**:
 Reached after a component's dispute window passes without an unresolved dispute filed during that window. Distinct from Returned; a Support-filed late dispute does not undo this state.
 _Avoid_: returned, done
+
+**Administrative lifecycle override**:
+A permissioned staff action that makes a defined booking or component state transition. It follows the applicable state machine and business rules; it does not permit arbitrary status editing.
+_Avoid_: admin bypass, arbitrary status change
 
 **Dispute window**:
 The configurable period after a component reaches its completion milestone during which the farmer may raise a dispute. It defaults to seven calendar days and is captured per component when the window starts. An unresolved dispute filed in the window delays Completed until it is resolved.
@@ -323,7 +327,7 @@ Deferred background work — notices, expiry sweeps, and academic installment/se
 _Avoid_: cron, task runner
 
 **Audit log**:
-The append-only record of privileged actions: actor, action, target, previous and new values, timestamp, reason. A reason is mandatory when a DENY is granted or a record is deleted.
+The append-only record of privileged state changes and sensitive reads: actor, action, target, previous and new values when applicable, timestamp, and any required reason. Audit records are not changed or removed.
 _Avoid_: history, activity log
 
 **Notification**:

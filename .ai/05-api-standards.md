@@ -24,17 +24,18 @@ The frontend calls high-level operations; it does not orchestrate internal algor
 | payments | Authenticated payment initiation plus provider-specific callback/return/IPN endpoints; exact paths and request/response contracts are defined during #19 implementation |
 | notifications | `GET /notifications` |
 | feature-flags | `GET /admin/feature-flags` · `PATCH /admin/feature-flags/:flagKey` (global default) · `PUT /admin/feature-flags/:flagKey/overrides/:scope/:scopeId` `DELETE .../overrides/:scope/:scopeId` (`scope` = `role`\|`provider`\|`user`; `scopeId` is a `role_key` when `scope=role`, a `userId` otherwise) |
-| roles | `GET /admin/roles` · `POST /admin/roles` (custom only) · `PATCH /admin/roles/:roleKey` (`403` if system role) · `POST /admin/roles/:roleKey/deactivate` (`403` if system role) · `POST /admin/users/:userId/roles/:roleKey` (assign) · `DELETE /admin/users/:userId/roles/:roleKey` (unassign — `403` if it's the user's structural role) |
+| roles and authorization | Existing admin role/assignment examples are historical; custom-role and permission-management operations must follow ADR-0003 and #11. There are no structural roles or `users.role` checks. Exact route paths/contracts for permission catalog, role, and user-assignment operations remain to be reconciled before implementation. |
+| admin console | Backend operations and operation-permission requirements are defined by #11 and ADR-0012. The UI is deferred. Exact routes/contracts remain to be designed; do not infer additional operations from this scope. |
 | health | `GET /health` `/health/database` (root path) |
 
-Do not invent endpoints outside this table or the current task. Action verbs (`activate`, `approve`, …) are POST sub-paths. **No endpoint performs a hard delete on an entity a booking can reference** — such endpoints are `POST .../deactivate` or a status-changing `PATCH`, never `DELETE`, per `01`/`10`.
+Do not invent endpoints outside this table or the current task. Action verbs (`activate`, `approve`, …) are POST sub-paths. No application endpoint performs a hard delete; deletion is soft deletion/deactivation only, per ADR-0003 and `10`. A `DELETE` method may remove an association/override where that operation is explicitly defined, but must not hard-delete a domain entity.
 
 ## Rules
 - `POST /bookings` is the **single** endpoint for creating a booking, regardless of whether it's storage-only, transport-only, or both — the request body's `service_type`/`booking_type` decides which child row(s) get created. There is no `/bookings/storage-only` or `/bookings/transport-only` — never split this into separate endpoints (`00` §Booking scope).
 - `POST /recommendations` runs eligibility → matching → route → cost → rank internally and returns ranked deals with: storage cost, transport cost, total cost, route distance, available capacity, provider rating. Own transport: transport cost not applicable, total = storage cost, transport excluded from ranking. Rate-limited per user/IP; route distances are cache-backed (`01` §Routing).
 - Transport cost = `base_charge + distance × cost_per_km` (formula: `00`).
 - `409 Conflict` = capacity conflict (e.g. 400 kg + 300 kg requested against 500 kg free: only one may succeed).
-- `403 Forbidden` = an ownership check failed, a feature flag resolved to disabled for this caller, or a protected-system-role rule was violated (editing/deleting a system role, unassigning a user's structural role) (`01` §Authorization, §Feature Flags, §Roles).
+- `403 Forbidden` = an ownership/party check failed, a feature flag resolved to disabled, or the caller lacks a required permission. Authorization is explicit and server-side; role names grant no authority (ADR-0003, #10, #11).
 - Booking lifecycle: `requested → approved|rejected → confirmed → active → completed`, plus `cancelled` and `expired` (TTL sweep, `01` §Background Jobs).
 - `POST /bookings` requires an `Idempotency-Key` header; a repeated key returns the original response (`01` §Idempotency).
 - Authentication follows ADR-0011: access requests use `Authorization: Bearer <access-token>`; `/auth/refresh` uses the same header scheme with a refresh token and rejects access tokens. Access tokens last 15 minutes; refresh tokens last 30 days and rotate on successful refresh. Every account operation requires verified email and an active session; unverified login issues no tokens. Verification links are single-use, expire after 24 hours, and are invalidated by resend.
@@ -42,6 +43,7 @@ Do not invent endpoints outside this table or the current task. Action verbs (`a
 - Multiple sessions are allowed. Logout revokes the current session; revoke-all revokes every session. Both take effect immediately for access and refresh tokens.
 - #19 payment initiation is authenticated and idempotent. Provider callback/return/IPN endpoints verify provider state and payment-attempt references; browser redirects alone are never payment confirmation. Payment callbacks do not transition booking state.
 - The ADR-0010 collection endpoints record deterministic academic simulations; they do not initiate a payment-provider checkout. Capacity is rechecked transactionally on extension approval, and deemed return requires `overstay.confirm.any`.
+- Admin endpoints declare an explicit permission per operation. Use the base permission for party records and `.any` only for cross-party access; never use an `.own` suffix. Defined booking lifecycle overrides require a reason, remain subject to the state machine and business invariants, and create audit entries. Sensitive payment, dispute, and ledger reads are audited. See #11 and ADR-0012.
 - Business errors are enforced in the backend (unsupported crop, no capacity, unavailable period, no suitable vehicle, invalid state transition, capacity conflict, ownership violation, disabled feature).
 
 ## Contract preservation (when touching an existing endpoint)
@@ -61,7 +63,7 @@ API docs are generated from Zod schemas (via an OpenAPI generator), not hand-mai
 - JSON field casing (do not force camelCase or snake_case globally).
 - Per-endpoint JSON schemas.
 - Socket.IO event names, payloads, connection auth, ack format.
-- Paths not yet defined: notifications (unread, mark read, read-all, delete), crops CRUD/search, storage-crop config (nested under storages), reviews, admin, matching result retrieval, provider-side booking list, user get-by-id/list.
+- Paths not yet defined: notifications (unread, mark read, read-all, delete), crops CRUD/search, storage-crop config (nested under storages), reviews, admin operations (scope in #11; route design remains open), matching result retrieval, provider-side booking list, user get-by-id/list.
 # Planning status (2026-11-08)
 
-Legacy endpoint examples below include role-based authorization and feature-flag precedence that conflict with ADR-0003 and issue #10. Treat them as historical drafts, not implementation contracts. Before feature implementation, reconcile every route and permission against the accepted server-side permission model. Financial endpoints for refunds, installments, ledger, commission, disputes and settlement are academic-grade; payout/refund/settlement execution is simulated. Payment routes are sandbox-only.
+Legacy endpoint examples below include role-based authorization and feature-flag precedence that conflict with ADR-0003 and issue #10. Treat them as historical drafts, not implementation contracts. Before feature implementation, reconcile every route and permission against the accepted server-side permission model. Financial endpoints for refunds, installments, ledger, commission, disputes and settlement are academic-grade; payout/refund/settlement execution is simulated. Payment routes are sandbox-only. Admin operations follow #11 and ADR-0012; deletion is soft deletion/deactivation only, and no hard-delete endpoint is permitted.

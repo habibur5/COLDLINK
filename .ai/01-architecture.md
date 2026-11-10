@@ -45,11 +45,13 @@ Cross-cutting: `middleware/` (auth, request handling), `config/`, `shared/` (see
 | `installments`, `refunds`, `ledger`, `commission`, `settlements`, `disputes` | Academic-grade persisted business workflows; external financial actions are simulated and isolated from checkout adapters |
 | `notifications` | Persisted notifications + Socket.IO delivery |
 | `reviews` | Ratings (optional module) |
-| `admin` | Admin management and monitoring |
+| `admin` | Backend admin-console operations and bounded operational monitoring; coordinates with domain-owning modules and does not own their business rules |
 | `jobs` | Scheduled/background work: booking TTL sweep, retention pruning, async notification delivery, rating recalculation (§Background Jobs below) |
-| `feature-flags` | Centralized flag evaluation, precedence, and custom-role management — the only place this logic lives (§Feature Flags, §Roles below) |
+| `feature-flags` | Centralized feature-flag evaluation, lifecycle, and overrides — availability logic only, never permission/role management (§Feature Flags below) |
 
 `payments` contains separate provider adapters for bKash and SSLCommerz. Adapter HTTP/API details remain inside their adapter; payment orchestration and callbacks remain in `payments`. #19 is strictly sandbox-only: bKash Tokenized Checkout without agreement and SSLCommerz Hosted Checkout. ADR-0010 installment collection is a deterministic academic simulation, not a recurring agreement or payment-provider attempt. `service-types` is replaced by `service_requests.service_type` enum and provider-owned rows.
+
+The backend admin console is defined by #11 and ADR-0012; there is no V1 admin UI. `admin` exposes explicitly permissioned operations and the approved read-only operational counts. It delegates provider verification, bookings, disputes, payments, academic financial workflows, authorization, feature flags, and settings to their owning modules. Audit recording uses one shared append-only boundary; its module owner is assigned before implementation. The admin module does not grant authority by role name or bypass an owning module's state machine, ownership, verification, capacity, or policy checks. Every state-changing admin action is audited; sensitive reads of payment, dispute, and ledger records are audited as well.
 
 ## Module interaction
 ```text
@@ -122,7 +124,9 @@ All retention windows and the TTL duration are read from config/env — never ha
 
 ## Authorization and feature flags
 
-Authorization follows ADR-0003, not legacy role-based rules: permissions use `resource.action`; default deny; any applicable DENY wins; roles are permission bundles, and user-level assignments are the only other source. Resolution is server-side on every request with version-invalidated caching; tokens carry identity only. `.own` means party to the record and `.any` grants explicit cross-party access. The state machine and service layer independently enforce lifecycle, ownership, verification, and business rules. Never infer authority from a role name or `users.role`.
+Authorization follows ADR-0003, not legacy role-based rules: permissions use `resource.action`; default deny; any applicable DENY wins; roles are permission bundles, and user-level assignments are the only other source. Resolution is server-side on every request with version-invalidated caching; tokens carry identity only. The base permission applies to records where the caller is a party; `.any` grants explicit cross-party access. There is no `.own` suffix. The state machine and service layer independently enforce lifecycle, ownership, verification, and business rules. Never infer authority from a role name or `users.role`.
+
+Admin-console operations follow #11 and ADR-0012: each operation requires its explicit permission, regardless of role name. A Platform Admin or another explicitly authorized permission manager may grant, modify, or revoke permissions. Administrative lifecycle overrides are limited to defined transitions, require a reason, and preserve state, party, verification, and capacity invariants; they are not arbitrary status edits. State-changing admin actions and sensitive financial/dispute reads are audited.
 
 Authentication follows ADR-0011: every account operation requires a verified email and an active server-side session. Access tokens are short-lived and carry no permission claims; session revocation invalidates access immediately.
 

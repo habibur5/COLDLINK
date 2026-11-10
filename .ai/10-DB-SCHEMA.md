@@ -1,8 +1,8 @@
-> **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation.
+> **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation. The audit-table shape below is a proposal under ADR-0013, not an approved final schema; audit ownership and failure/transaction decisions remain open.
 
 # ColdLink — Database Schema (updated)
 
-Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADRs and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), ADR-0011 (authentication/session/contact policy), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
+Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADRs and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), ADR-0011 (authentication/session/contact policy), ADR-0012 (admin operations and audit), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
 This version applies the review changes. Everything not tagged is exactly as in the previous schema. Compare against your current `10` before replacing it.
 
 ## Conventions
@@ -231,10 +231,15 @@ notifications
   related_entity_type VARCHAR(50) NULL · related_entity_id CHAR(36) NULL   -- not a DB FK
   is_read TINYINT(1) default 0 · created_at · read_at DATETIME NULL
 
-admin_action_logs
-  id CHAR(36) PK · admin_user_id FK→users.id · action_type VARCHAR(50)
+admin_action_logs                                 -- proposed shape; see ADR-0013 (not approved final schema)
+  id CHAR(36) PK · actor_user_id FK→users.id · action_key VARCHAR(100)
+  access_type ENUM(state_change,sensitive_read)
   target_entity_type VARCHAR(50) · target_entity_id CHAR(36)               -- not a DB FK
-  description VARCHAR(255) NULL · created_at
+  before_state JSON NULL · after_state JSON NULL · reason VARCHAR(255) NULL
+  created_at DATETIME
+  -- Every state-changing admin action is recorded; sensitive payment, dispute, and ledger reads are recorded.
+  -- State changes include before/after values; required reasons are captured (including DENY grants and deletions).
+  -- Append-only; no console edit/delete. Sensitive reads do not store the viewed financial/dispute payload.
 
 feature_flags                                    -- global default per named flag
   id CHAR(36) PK · flag_key VARCHAR(100) UNIQUE       -- e.g. 'reviews.enabled', 'booking.create'
@@ -340,7 +345,7 @@ The approved minimum persisted data for #19 is merchant reference, provider refe
 | 29 | `reviews.provider_id` | `provider_profiles.user_id` | many-to-one | NO |
 | 30 | `reviews.storage_booking_id` | `storage_bookings.id` | zero-or-one-to-one | YES |
 | 31 | `reviews.transportation_booking_id` | `transportation_bookings.id` | zero-or-one-to-one | YES |
-| 32 | `admin_action_logs.admin_user_id` | `users.id` | many-to-one | NO |
+| 32 | `admin_action_logs.actor_user_id` | `users.id` | many-to-one | NO |
 | 33 | `feature_flag_overrides.flag_key` | `feature_flags.flag_key` | many-to-one | NO |
 | 34 | `user_roles.user_id` | `users.id` | many-to-one | NO |
 | 35 | `user_roles.role_key` | `roles.role_key` | many-to-one | NO |
@@ -404,7 +409,7 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `reviews` | `uq_reviews_storage` | `storage_booking_id` | yes | One review per storage booking |
 | `reviews` | `uq_reviews_transport` | `transportation_booking_id` | yes | One review per transport booking |
 | `reviews` | `idx_reviews_provider` | `provider_id, created_at` | no | Rating recalculation `[NEW]` |
-| `admin_action_logs` | `idx_aal_admin` | `admin_user_id, created_at` | no | Audit by admin `[NEW]` |
+| `admin_action_logs` | `idx_aal_actor` | `actor_user_id, created_at` | no | Audit by actor `[NEW]` |
 | `admin_action_logs` | `idx_aal_target` | `target_entity_type, target_entity_id` | no | Audit by target `[NEW]` |
 | `feature_flags` | `uq_flags_key` | `flag_key` | yes | Flag lookup |
 | `feature_flag_overrides` | `uq_ffo_flag_scope` | `flag_key, scope, scope_id` | yes | One override per target |
