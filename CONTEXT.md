@@ -120,6 +120,10 @@ _Avoid_: complaint, claim
 A catalog product that can be stored or transported. Crop names are translatable; the crop identifier is not.
 _Avoid_: product, item
 
+**Farm location**:
+A location record belonging to a Farmer profile, containing its address and geographical coordinates. Farm-specific location data is stored on the Farm location, not duplicated in the User Profile.
+_Avoid_: profile coordinates, user address (when a farm location is meant)
+
 **Storage facility**:
 A physical location where a provider stores crops. It is a destination, not an operator, and has no service-area radius.
 _Avoid_: warehouse, generic "cold storage"

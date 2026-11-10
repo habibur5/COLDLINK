@@ -12,6 +12,7 @@ This version applies the review changes. Everything not tagged is exactly as in 
 - `created_at` / `updated_at` / `*_at` are `DATETIME` stored in **UTC**; convert to Bangladesh time in the UI. The previous schema listed these names without types, so `DATETIME` is an assumption.
 - A column not marked `NULL` is `NOT NULL`.
 - **Every FK is `ON DELETE RESTRICT`.** No hard deletes on anything a booking can reference (users, providers, facilities, vehicles, crops, farm locations): every "delete" flips a status field.
+- Product/service quantities and corresponding capacities or portions use compatible units appropriate to that product or service; there is no universal quantity unit. The precise physical representation of unit definitions is not specified here.
 - Polymorphic references (`booking_status_history.entity_id`, `notifications.related_entity_id`, `admin_action_logs.target_entity_id`, `feature_flag_overrides.scope_id`) are **not** DB foreign keys; they are checked in the service layer.
 - Tags used below:
 
@@ -59,9 +60,7 @@ user_contact_history                             -- [NEW TABLE] preserve prior c
 
 farmer_profiles                                  -- 1:1 with users
   user_id CHAR(36) PK FK→users.id
-  default_farm_address VARCHAR(255) NULL         -- [REMOVE?] duplicates farm_locations (see §6 S3)
-  default_latitude DECIMAL(9,6) NULL             -- [REMOVE?]
-  default_longitude DECIMAL(9,6) NULL            -- [REMOVE?]
+  -- General profile/contact information only; farm-specific address and coordinates live in farm_locations.
   created_at
 
 provider_profiles                                -- 1:1 with users
@@ -151,7 +150,7 @@ farm_locations                                   -- reusable, so requests don't 
 
 service_requests                                 -- single entry point, all 3 service types
   id CHAR(36) PK · farmer_id FK→farmer_profiles.user_id · crop_id FK→crops.id
-  quantity DECIMAL(10,2) · farm_location_id FK→farm_locations.id
+  quantity DECIMAL(10,2) · unit appropriate to the product/service · farm_location_id FK→farm_locations.id
   service_type ENUM(storage_only,transportation_only,both)
   storage_start_date DATE NULL · storage_end_date DATE NULL
   needs_transportation TINYINT(1)          -- app-derived from service_type, see §Booking scope; not independently settable
@@ -464,8 +463,8 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 | M4 | Must | `idempotency_keys` | Add `user_id`, composite PK, `status`; nullable response columns |
 | M5 | Must | all | Add missing indexes (§5a); `ON DELETE RESTRICT` on every FK |
 | S1 | Should | `recommendations` | Decide one name: schema says `recommendations`, docs `00`/`01` say `service_recommendations` |
-| S2 | Should | docs | Define units (e.g. all quantities in kg) and whether `storage_days` counts both start and end dates |
-| S3 | Should | `farm_locations`, `farmer_profiles` | `farm_locations` becomes the single source: add `is_default`, `status`; drop `farmer_profiles.default_*` |
+| S2 | Decided | quantity/date rules | Use product- or service-appropriate quantity units; do not force a universal unit. Count storage duration inclusively by calendar day, without extending the rule to unrelated services. Exact physical representation of unit definitions is not specified here. |
+| S3 | Decided | farm location/profile data | Store farm address and geographical coordinates on `farm_locations`; do not duplicate farm-specific location data in `farmer_profiles`. Keep general profile and contact information separate. |
 | S4 | Should | `feature_flag_overrides` | CHECK that role-scope rows have `enabled = 1` |
 | S5 | Should | all `DATETIME` | Store UTC; convert in the UI |
 | S6 | Should | several | Data-integrity CHECKs (§5b) |
@@ -484,4 +483,4 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 | D5 | `booking_status_history` has no retention/archive plan | Keep as is for v1 (already deferred in `01`) |
 
 ## Undecided
-S1 (table name), S2 (units and day counting), S3 (drop `farmer_profiles.default_*`). Auth/session/contact policy is resolved in ADR-0011. Never invent undecided items: follow existing code, else ask.
+S1 (table name). The S2 quantity-unit and inclusive storage-day decisions and S3 farm-location/profile separation are resolved above; exact physical representation of unit definitions remains unspecified. Auth/session/contact policy is resolved in ADR-0011. Never invent undecided items: follow existing code, else ask.

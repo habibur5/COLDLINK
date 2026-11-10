@@ -19,6 +19,8 @@ This ADR records the resulting architecture. It supersedes the original single-d
 **1. Booking scope (MVP): one product per booking, but that product can span multiple fulfillment slots.**
 A booking is for exactly one crop/product and one quantity. Multi-product bookings (e.g., potato + mango in one booking) are explicitly out of MVP scope, deferred to a future version. Within that single product, fulfillment is **not** constrained to one storage provider and one vehicle — it's composed of however many storage "slots" and transport "slots" are needed to cover the requested quantity.
 
+Quantities use units appropriate to the product or service (for example, kg or ton); there is no universal unit across services. A quantity and the capacities or portions compared with it must be interpreted in compatible units. The physical representation of unit definitions is not specified by this decision.
+
 **2. All four bundle shapes are supported, with no fixed provider-count cap.**
 A fulfillment bundle may be: single storage + single transport, single storage + multiple transport, multiple storage + single transport, or multiple storage + multiple transport. The number of providers/vehicles in a bundle is **derived from actual capacity, availability, and route feasibility** — never an artificial business rule like "max 2 storages." A 5000kg request might genuinely need 5 storage providers and 6 vehicles; the system must not prevent that.
 
