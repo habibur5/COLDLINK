@@ -35,7 +35,7 @@ sequenceDiagram
     Supply->>Prisma: Read eligible supply
     Prisma->>DB: SELECT resources/configurations/blocks
     DB-->>Prisma: Candidate resources
-    Match->>Match: Convert compatible quantities exactly; require full quantity per resource
+    Match->>Match: Convert compatible quantities exactly and require full quantity per resource
     Match->>Route: Check required route feasibility
     Route-->>Match: Feasible/infeasible and route facts
     Match->>Cost: Calculate eligible service costs
@@ -107,7 +107,7 @@ sequenceDiagram
     Payment->>Gateway: Verify authoritatively using stored references
     Gateway-->>Payment: Verified payment facts
     Payment->>DB: Persist verified attempt result
-    Payment-->>Owner: Return verified result; no domain mutation
+    Payment-->>Owner: Return verified result without changing domain state
     Owner->>DB: Apply own allowed booking/finance transition and audit atomically
     Owner-->>API: Domain outcome
     API-->>UI: Updated domain response
