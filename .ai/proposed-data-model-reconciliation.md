@@ -50,7 +50,7 @@ Permissions attach only to Roles and Users. No structural account-type roles, pr
 
 ### Demand, recommendation, and fulfillment
 
-- **Service request** — one crop, one quantity, and exactly one of three supported service types: storage-only, transport-only, or storage plus transport. Quantities use units appropriate to the product or service (for example, kg or ton); there is no universal unit. Each quantity/capacity comparison must use compatible units; physical unit-definition representation is unresolved.
+- **Service request** — one crop, one quantity, and exactly one of three supported service types: storage-only, transport-only, or storage plus transport. Quantities use controlled units appropriate to the crop/service; no universal unit is assumed. Unit compatibility is based on a controlled unit catalog and crop-to-unit associations; capacity comparisons convert compatible values to a common base exactly.
 - **Recommendation** — persisted, expiring, ranked complete alternative. Each Recommendation independently meets the whole requested quantity:
   - Storage-only: exactly one cold-storage facility capable of storing the full requested quantity for the full requested storage period; no vehicle.
   - Transport-only: exactly one vehicle capable of handling the full requested quantity; no facility.
@@ -105,7 +105,8 @@ Under ADR-0015, applicable booking/down-payment obligations, subsequent storage 
 | Storage fulfillment–facility-crop config / allocation | One selected config and a dated capacity allocation covering the same inclusive storage period used by the Recommendation and Booking. | Confirmed inclusive-day rule; physical FK/index shape proposed. |
 | Transport fulfillment–Vehicle / availability block | One selected Vehicle and its applicable time block. | Confirmed; physical FK/index shape proposed. |
 | Component–Dispute | Each dispute concerns exactly one component. | Confirmed issue #8 decision. |
-| Provider/service–commission configuration | Centrally managed percentage rate per provider and service, with explicitly recorded negotiated exceptions; applicable rate is snapshotted when booking price is agreed. | Confirmed, ADR-0008/#4. Uniqueness and exception precedence are unresolved. |
+| Provider/service–commission configuration | One general centrally managed rate per service capability and at most one negotiated exception per provider/capability. The exception overrides, never adds to, the general rate; snapshot the resolved rate when the booking price is agreed. | Confirmed policy, ADR-0008/#4/#21; approved reconciliation: unique service key for general rate, unique provider+service key for exception; immediate effect on save, no scheduled periods or overlap. |
+| Crop/service–quantity unit | Unit definitions are controlled catalog records; each crop has an explicit allowed-unit set. Request and resource capacity quantities carry unit references and are compared only when compatible. | Approved reconciliation: exact conversion to common base for compatible units; full requested quantity remains required of every selected resource. |
 | Provider ledger–entries / modeled balances | Ledger entries are immutable and append-only; Pending and Available totals may be derived from entries or persisted separately. | Immutable entries confirmed; balance representation unresolved. Simpler derivation is proposed, not approved. |
 | Feature flag–overrides | Approved scopes only; archive retains but ignores override rows. | Confirmed issue #10. |
 | Audit event–actor/target | Central event with actor where applicable and target type/id; target may be polymorphic. | Confirmed ADR-0013; physical shape proposed. |
@@ -122,6 +123,7 @@ Under ADR-0015, applicable booking/down-payment obligations, subsequent storage 
 - During a reviewed resource update, prior approved details remain effective until approval; rejection preserves those details.
 - A storage-only Recommendation uses exactly one full-quantity facility and no vehicle; a transport-only Recommendation uses exactly one full-quantity vehicle and no facility; a combined Recommendation uses exactly one of each, each covering the full quantity. Recommendations are never combined.
 - A Booking commits to one complete Recommendation and has fulfillment cardinality determined by its service type: one facility, one vehicle, or one of each. No fulfillment is split across multiple resources. Capacity remains transactionally protected under existing storage rules.
+- Quantity units are controlled catalog values. Each crop has an explicit allowed-unit set; requests and facility capacities use units allowed for that crop, while vehicle capacity must share the request's quantity dimension. Convert exactly before comparison; each selected resource independently covers the full requested quantity.
 - V1 lifecycle design stays basic; issue #15's expanded replacement/deadline state machine is deferred. ADR-0009's approved replacement policy remains in force for applicable academic refund calculations.
 - Sandbox attempts require authoritative verification and do not themselves mutate booking or academic finance state.
 - Financial records use integer poisha where applicable, are academic/non-custodial, and remain append-only.
@@ -147,6 +149,8 @@ These are logical recommendations for future physical schema review, not table/c
 - **Provider ownership:** one owner per resource, multiple resources per provider, no sharing or transfers; one account may offer both capabilities.
 - **Resource update and status:** staged reviewed updates preserve approved details; active/suspended/deactivated status is separate; existing bookings continue; reactivation alone adds no verification.
 - **Quantity and location:** use compatible product/service units with no universal unit; farm addresses/coordinates belong to Farm location, not User Profile.
+- **Quantity-unit model:** controlled `quantity_units` records, explicit crop-to-unit associations, and exact conversion to a common base unit for compatible quantities. The approved V1 unit list is curated; no unit values are inferred here.
+- **Commission configuration:** one general rate per service capability and at most one provider/service exception. The exception overrides, not adds to, the general rate. Changes are effective immediately when saved, without scheduled dates or overlapping periods; existing bookings keep their snapshotted rate. No rate values are supplied.
 - **Storage duration:** inclusive calendar-day counting for storage calculations only.
 - **Legal evidence:** issue #20 closed as not planned; manual admin review with configurable categories and no legal assertions/regulator integration.
 - **Baseline roles:** editable seeded permission collections, with `user` as registration baseline; no role-name authority.
@@ -160,9 +164,7 @@ These are logical recommendations for future physical schema review, not table/c
 |---|---|
 | PaymentAttempt ownership and obligation association | Authenticated initiation, ownership validation, durable callback correlation by stored references, and authoritative provider verification are approved. The exact persisted User ownership relation and any relation to a Booking/payment obligation are not approved. Do not add a direct Booking FK or polymorphic target without approval. |
 | Resource update/evidence history shape | Staged update behavior is confirmed; separate update record versus versioned pending payload remains a physical modeling choice. Keep it simple and preserve history. |
-| Physical unit representation | No universal unit; exact enum/catalog/documented convention is not specified. |
 | Provider balance representation | ADR-0008 defines Pending/Available modeled balances and ledger-based balance transitions; #21 requires persisted ledger entries, balance transitions, and required balance/withdrawal state. Neither source selects whether current totals are derived from immutable ledger entries or persisted separately. **Proposal:** derive totals from ledger entries for simpler V1 consistency; this requires approval. The alternative is separately persisted totals maintained consistently with ledger entries. |
-| Commission configuration | Immutable ledger is approved; physical uniqueness and exception-precedence model remain open. |
 | Settings catalog | Use only values already approved by ADRs; unresolved names/defaults must not be added by inference. |
 | Feature flag archive field / audit physical shape | Semantics are approved; timestamp/status and audit FK/integrity implementation are not. |
 | Issue #15 details | Full replacement and deadline state machine remains deferred; ADR-0009's approved provider-failure replacement valuation remains in force. Do not make the expanded state machine a V1 schema blocker. |
@@ -202,6 +204,8 @@ GitHub issue bodies #15, #19, and #23 were inspected but not edited. They remain
 | Central append-only audit | ADR-0013; ADR-0012 |
 | Feature flags separate from permissions; scopes, precedence, archival | Closed issue #10; glossary |
 | Basic V1 statuses; full lifecycle deferred | ADR-0014; issue #15 (open/deferred) |
+| Commission rate identity, exception precedence, and immediate-effective configuration | ADR-0008; issues #4/#21; approved user reconciliation |
+| Controlled quantity units, crop/unit compatibility, exact conversion, and full-quantity resource eligibility | ADR-0001; ADR-0014; approved user reconciliation |
 | Inclusive storage-day calculation; unit-appropriate quantities; Farm location owns farm address/coordinates | ADR-0001 and ADR-0009; `.ai/10-DB-SCHEMA.md` resolved decisions; glossary |
 | English-only V1; no translation tables | ADR-0010; glossary |
 | No asserted legal document checklist or regulator integration | ADR-0005 amendment; issue #20 closed as not planned |

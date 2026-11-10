@@ -99,6 +99,17 @@ crops
   category VARCHAR(100) NULL
   status ENUM(active,inactive) · created_at
 
+quantity_units                                   -- controlled definitions; seed only approved V1 units
+  id CHAR(36) PK · code VARCHAR(30) UNIQUE · display_name VARCHAR(60)
+  quantity_dimension VARCHAR(30) · to_base_numerator BIGINT UNSIGNED
+  to_base_denominator BIGINT UNSIGNED · created_at
+  CHECK(to_base_numerator > 0 AND to_base_denominator > 0)
+  -- Conversion ratio is exact; base unit is the unit with ratio 1/1 per dimension.
+
+crop_quantity_units                              -- units allowed for each crop
+  crop_id FK→crops.id · quantity_unit_id FK→quantity_units.id
+  PRIMARY KEY(crop_id, quantity_unit_id)
+
 storage_facilities
   id CHAR(36) PK · provider_id FK→provider_profiles.user_id
   name VARCHAR(150) · address VARCHAR(255)
@@ -107,20 +118,23 @@ storage_facilities
 
 facility_crop_configs                            -- resolves facility ↔ crop, carries capacity+price
   id CHAR(36) PK · facility_id FK→storage_facilities.id · crop_id FK→crops.id
+  quantity_unit_id FK→quantity_units.id
   max_capacity_for_crop DECIMAL(10,2) · price_per_unit_per_day DECIMAL(10,2)
   is_available TINYINT(1)                  -- provider on/off toggle, separate from dated availability
   created_at · updated_at · UNIQUE(facility_id, crop_id)
+  FK(crop_id, quantity_unit_id) → crop_quantity_units(crop_id, quantity_unit_id)
 
 storage_capacity_allocations                     -- the actual dated consumption
   id CHAR(36) PK · facility_crop_config_id FK→facility_crop_configs.id
   storage_booking_id FK→storage_bookings.id UNIQUE   -- 1:1, set once booked (create order: see §7 D3)
-  quantity DECIMAL(10,2) · start_date DATE · end_date DATE
+  quantity DECIMAL(10,2) · quantity_unit_id FK→quantity_units.id · start_date DATE · end_date DATE
   status ENUM(reserved,occupied,released,cancelled) · created_at · updated_at
 
 vehicles
   id CHAR(36) PK · provider_id FK→provider_profiles.user_id
   vehicle_type ENUM(open_truck,covered_van,refrigerated_truck,pickup,other)
   registration_number VARCHAR(50) UNIQUE · capacity DECIMAL(10,2)
+  capacity_unit_id FK→quantity_units.id
   base_charge DECIMAL(10,2) · cost_per_km DECIMAL(10,2)
   status ENUM(available,unavailable,maintenance) · created_at · updated_at
 
@@ -150,7 +164,8 @@ farm_locations                                   -- reusable, so requests don't 
 
 service_requests                                 -- single entry point, all 3 service types
   id CHAR(36) PK · farmer_id FK→farmer_profiles.user_id · crop_id FK→crops.id
-  quantity DECIMAL(10,2) · unit appropriate to the product/service · farm_location_id FK→farm_locations.id
+  quantity DECIMAL(10,2) · quantity_unit_id FK→quantity_units.id · farm_location_id FK→farm_locations.id
+  FK(crop_id, quantity_unit_id) → crop_quantity_units(crop_id, quantity_unit_id)
   service_type ENUM(storage_only,transportation_only,both)
   storage_start_date DATE NULL · storage_end_date DATE NULL
   needs_transportation TINYINT(1)          -- app-derived from service_type, see §Booking scope; not independently settable
@@ -183,8 +198,9 @@ bookings                                         -- parent commitment
 storage_bookings                                 -- present iff booking_type ∈ {storage_only, both}
   id CHAR(36) PK · booking_id FK→bookings.id UNIQUE
   facility_crop_config_id FK→facility_crop_configs.id
-  quantity DECIMAL(10,2) · start_date DATE · end_date DATE
-  price_per_unit_snapshot DECIMAL(10,2) · total_storage_cost DECIMAL(10,2)
+  quantity DECIMAL(10,2) · quantity_unit_id FK→quantity_units.id · start_date DATE · end_date DATE
+  price_per_unit_snapshot DECIMAL(10,2) · commission_rate_pct_snapshot DECIMAL(5,2)
+  total_storage_cost DECIMAL(10,2)
   installment_cadence_snapshot ENUM(weekly,biweekly,monthly,per_storage_period,custom) NULL
   installment_cadence_custom_days_snapshot INT NULL
   down_payment_pct_snapshot DECIMAL(5,2) NULL
@@ -196,13 +212,14 @@ storage_bookings                                 -- present iff booking_type ∈
 
 transportation_bookings                          -- present iff booking_type ∈ {transportation_only, both}
   id CHAR(36) PK · booking_id FK→bookings.id UNIQUE · vehicle_id FK→vehicles.id
+  quantity DECIMAL(10,2) · quantity_unit_id FK→quantity_units.id
   pickup_address VARCHAR(255) · pickup_latitude DECIMAL(9,6) · pickup_longitude DECIMAL(9,6)
   dropoff_address VARCHAR(255) · dropoff_latitude DECIMAL(9,6) · dropoff_longitude DECIMAL(9,6)
   distance_km DECIMAL(7,2)
   duration_min INT                                -- [NEW] trip duration snapshot (routing provider)
   scheduled_datetime DATETIME
   base_charge_snapshot DECIMAL(10,2) · cost_per_km_snapshot DECIMAL(10,2)
-  total_transport_cost DECIMAL(10,2)
+  commission_rate_pct_snapshot DECIMAL(5,2) · total_transport_cost DECIMAL(10,2)
   status ENUM(pending,approved,rejected,active,completed,cancelled)
   rejection_reason VARCHAR(255) NULL              -- [OPTIONAL]
   created_at · updated_at
@@ -273,6 +290,21 @@ payment_attempts                                 -- #19; sandbox provider attemp
   -- Exact ownership relationship/FK, column lengths, timestamp fields, status enum, and indexes
   -- are finalized during implementation; callbacks never update booking lifecycle state.
 
+commission_service_rates                         -- current general commission percentage per service
+  service_capability ENUM(storage,transportation) PK · rate_pct DECIMAL(5,2)
+  updated_by FK→users.id · updated_at DATETIME(3)
+  CHECK(rate_pct >= 0 AND rate_pct <= 100)
+
+provider_commission_exceptions                   -- negotiated override; one per provider/service
+  provider_user_id FK→provider_profiles.user_id
+  service_capability ENUM(storage,transportation)
+  rate_pct DECIMAL(5,2) · updated_by FK→users.id · updated_at DATETIME(3)
+  PRIMARY KEY(provider_user_id, service_capability)
+  CHECK(rate_pct >= 0 AND rate_pct <= 100)
+  -- Exception replaces the general rate; it is not additive. Changes take effect when saved.
+  -- No scheduled effective dates or overlapping periods in V1; retain changes through audit records.
+  -- Snapshot the resolved rate on the relevant storage/transport booking when its price is agreed.
+
 platform_settings                                -- global policy values; values take effect only for new snapshots
   setting_key VARCHAR(100) PK · value_json JSON · updated_by FK→users.id NULL · updated_at
   -- ADR-0010 keys: installment.default_cadence, installment.grace_days,
@@ -310,6 +342,8 @@ overstay_records                                 -- one record per storage booki
 The approved minimum persisted data for #19 is merchant reference, provider reference, amount, currency, provider, status, and relevant timestamps. Payment-attempt ownership must be verifiable for authenticated initiation and callback correlation; determine its relation to existing records without making the Payment module an owner of booking transitions or ledger behavior.
 
 ---
+
+At booking price agreement, resolve one applicable rate for each provider/service: use the unique provider exception when present, otherwise the unique general service rate. Configuration updates apply immediately to subsequent price agreements; existing booking snapshots do not change. Unit compatibility is validated before matching and capacity checks: requests use a unit allowed for their crop, facility configs use an allowed unit for that crop, and vehicle capacity must share the request's quantity dimension. Compare exact rational conversions to the dimension's base unit without rounding. The service must not infer a rate or unit. Each selected resource must independently meet the full requested quantity; no capacity combining is permitted.
 
 ## 5. Foreign keys (all `ON DELETE RESTRICT`)
 
@@ -363,6 +397,19 @@ The approved minimum persisted data for #19 is merchant reference, provider refe
 | 46 | `auth_sessions.user_id` | `users.id` | many-to-one | NO |
 | 47 | `auth_tokens.session_id` | `auth_sessions.id` | many-to-one | YES |
 | 48 | `user_contact_history.user_id` | `users.id` | many-to-one | NO |
+| 49 | `crop_quantity_units.crop_id` | `crops.id` | many-to-one | NO |
+| 50 | `crop_quantity_units.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 51 | `facility_crop_configs.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 52 | `storage_capacity_allocations.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 53 | `vehicles.capacity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 54 | `service_requests.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 55 | `storage_bookings.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 56 | `transportation_bookings.quantity_unit_id` | `quantity_units.id` | many-to-one | NO |
+| 57 | `provider_commission_exceptions.provider_user_id` | `provider_profiles.user_id` | many-to-one | NO |
+| 58 | `provider_commission_exceptions.updated_by` | `users.id` | many-to-one | NO |
+| 59 | `commission_service_rates.updated_by` | `users.id` | many-to-one | NO |
+| 60 | `facility_crop_configs.(crop_id, quantity_unit_id)` | `crop_quantity_units.(crop_id, quantity_unit_id)` | many-to-one | NO |
+| 61 | `service_requests.(crop_id, quantity_unit_id)` | `crop_quantity_units.(crop_id, quantity_unit_id)` | many-to-one | NO |
 
 **Logical references (no DB FK):** `booking_status_history.entity_id` (→ `bookings` / `storage_bookings` / `transportation_bookings` by `entity_type`), `notifications.related_entity_id`, `admin_action_logs.target_entity_id`, `feature_flag_overrides.scope_id` (→ `roles.role_key` / `provider_profiles.user_id` / `users.id` by `scope`).
 
@@ -381,6 +428,8 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `auth_tokens` | `idx_auth_tokens_expires` | `expires_at` | no | Expired token pruning `[NEW]` |
 | `user_contact_history` | `idx_contact_history_user_changed` | `user_id, changed_at` | no | Contact-change history `[NEW]` |
 | `crops` | `uq_crops_name` | `name` | yes | Catalog uniqueness |
+| `quantity_units` | `uq_quantity_units_code` | `code` | yes | Stable controlled-unit key |
+| `crop_quantity_units` | `pk_crop_quantity_units` | `crop_id, quantity_unit_id` | yes | Allowed units per crop |
 | `farm_locations` | `idx_farm_locations_farmer` | `farmer_id, status` | no | Active locations per farmer `[NEW]` |
 | `storage_facilities` | `idx_facilities_provider` | `provider_id, status` | no | Provider dashboard, ownership checks `[NEW]` |
 | `storage_facilities` | `idx_facilities_status` | `status` | no | Matching filter: active facilities `[NEW]` |
@@ -422,6 +471,8 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `booking_extension_requests` | `idx_ber_storage_created` | `storage_booking_id, created_at` | no | Booking extension history |
 | `overstay_records` | `uq_or_storage_booking` | `storage_booking_id` | yes | One overstay record per storage booking |
 | `overstay_records` | `idx_or_active` | `status, start_date` | no | Daily overstay and eligibility sweep |
+| `provider_commission_exceptions` | `pk_provider_commission_exception` | `provider_user_id, service_capability` | yes | At most one negotiated override per provider/service |
+| `commission_service_rates` | `pk_commission_service_rate` | `service_capability` | yes | At most one general rate per service |
 | `user_roles` | `idx_user_roles_role` | `role_key` | no | Users holding a role `[NEW]` |
 
 ## 5b. Constraints
@@ -445,6 +496,8 @@ InnoDB also creates an index on each FK column automatically. Listed below are t
 | `provider_service_areas` | CHECK | `radius_km > 0` | `[SHOULD]` |
 | `bookings` | CHECK | `total_cost >= 0` | `[SHOULD]` |
 | `provider_profiles` | CHECK | custom cadence has `installment_cadence_custom_days >= 7`; override custom cadence has `admin_cadence_override_custom_days >= 7`; percentage fields are between 0 and 100 | `[NEW]` |
+| `quantity_units` | CHECK | `to_base_numerator > 0 AND to_base_denominator > 0` | `[NEW]` |
+| `commission_service_rates`, `provider_commission_exceptions` | CHECK | `rate_pct BETWEEN 0 AND 100` | `[NEW]` |
 | `storage_installments` | CHECK | `amount >= 0`; `kind='down_payment'` has no service period; `waive_reason` is present when status is `waived` | `[NEW]` |
 | `booking_extension_requests` | Service rule | only one `pending` row per storage booking; MariaDB has no portable partial unique index | `[NEW]` |
 | `overstay_records` | CHECK | `rate_per_day_snapshot >= 0`, `multiplier_snapshot >= 0`, `days_elapsed >= 0`, `total_accrued >= 0` | `[NEW]` |
@@ -463,7 +516,7 @@ Single-column `UNIQUE` keys are inline in §1–§4. MariaDB enforces `CHECK` fr
 | M4 | Must | `idempotency_keys` | Add `user_id`, composite PK, `status`; nullable response columns |
 | M5 | Must | all | Add missing indexes (§5a); `ON DELETE RESTRICT` on every FK |
 | S1 | Should | `recommendations` | Decide one name: schema says `recommendations`, docs `00`/`01` say `service_recommendations` |
-| S2 | Decided | quantity/date rules | Use product- or service-appropriate quantity units; do not force a universal unit. Count storage duration inclusively by calendar day, without extending the rule to unrelated services. Exact physical representation of unit definitions is not specified here. |
+| S2 | Decided | quantity/date rules | Use controlled product- or service-appropriate quantity units; each crop has approved unit associations, compatible quantities convert exactly to a common base before comparison, and each resource independently meets full quantity. Do not force a universal unit. Count storage duration inclusively by calendar day, without extending the rule to unrelated services. |
 | S3 | Decided | farm location/profile data | Store farm address and geographical coordinates on `farm_locations`; do not duplicate farm-specific location data in `farmer_profiles`. Keep general profile and contact information separate. |
 | S4 | Should | `feature_flag_overrides` | CHECK that role-scope rows have `enabled = 1` |
 | S5 | Should | all `DATETIME` | Store UTC; convert in the UI |
