@@ -41,8 +41,8 @@ A user's initial submission requesting approval to offer one or more service typ
 _Avoid_: registration, provider signup
 
 **Role**:
-A named, admin-defined collection of permissions. The name carries no authority; only the permissions it contains do.
-_Avoid_: system role, structural role, account type, user type
+A named, admin-editable collection of permissions. Initial setup seeds predefined roles such as `user`, `admin`, `farmer`, `provider`, and `staff`; these remain editable and manageable through authorized role-management operations. The name carries no authority; only explicitly assigned permissions do. `user` is the ordinary baseline role granted at registration.
+_Avoid_: role name as authority, structural role, account type, user type
 
 **Permission**:
 An atomic, named capability to perform one operation on one resource, attached to a role or a user as an ALLOW or a DENY. Any applicable DENY wins; with no applicable ALLOW, access is denied.
@@ -69,8 +69,8 @@ The fixed, seeded, versioned list of every permission key. It grows only through
 _Avoid_: permission list
 
 **Baseline role**:
-The seeded, admin-editable role granted automatically at registration. It holds ordinary capabilities only - no administrative, provider-approval or settlement authority.
-_Avoid_: default role, system role, account type
+The seeded, admin-editable `user` role granted automatically at registration. It holds only its explicitly assigned ordinary permissions - no `.any`, administrative, provider-approval or settlement authority unless explicitly and validly changed through role management.
+_Avoid_: role name as authority, account type
 
 **Authorization resolution**:
 The single centralized mechanism that evaluates a user's effective permissions across role membership and user-level assignments, server-side on every request. No module decides access on its own; access tokens carry user identity and a session reference only, never permission claims.
@@ -342,8 +342,8 @@ _Avoid_: socket, websocket room
 
 These are no longer concepts. Do not reintroduce them under any name.
 
-**Structural role / system role / account type**:
-Removed. A user has no fixed kind. The `users.role` enum, its `farmer | provider | admin` values, and any authorization based on holding a named role are gone. Identity is a **user**; authority is **permissions**; domain data is **profiles** and owned resources.
+**Structural role / fixed account type / legacy `users.role` enum**:
+Removed. A user has no fixed kind, and the legacy `users.role` enum is not the authorization model. Predefined editable roles (`user`, `admin`, `farmer`, `provider`, `staff`) are permission collections, not account types; holding a role never grants authority because of its name. Identity is a **user**; authority is **permissions**; domain data is **profiles** and owned resources.
 
 **Provider service area**:
 Superseded by **vehicle service area**. A service area belongs to a vehicle, never to a provider.

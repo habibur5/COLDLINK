@@ -1,5 +1,7 @@
 > **Planning warning:** This schema is not yet a migration-ready implementation contract. Legacy rows/notes mentioning `users.role`, structural roles, licensed custody, or live settlement are superseded. Reconcile model, table definitions, keys, and indexes against accepted ADRs before implementation. The audit-table shape below remains a planning schema, not a migration-ready contract; ownership and transactional/failure requirements are settled by ADR-0013.
 
+> **Role clarification (ADR-0003):** Initial setup seeds editable `user`, `admin`, `farmer`, `provider`, and `staff` permission-collection roles. These are not fixed account types or immutable system roles. Role names never grant authority; only explicitly assigned permissions do. The legacy `users.role` enum and schema notes treating seeded roles as immutable are superseded.
+
 # ColdLink — Database Schema (updated)
 
 Data-model planning reference for MariaDB (InnoDB, utf8mb4) and Prisma ORM 7. This document contains legacy role-based and real-settlement assumptions that conflict with accepted ADRs and the Waterfall feature boundary. Before implementing domain migrations, reconcile it with ADR-0003 (permission-based RBAC), ADR-0006 (#19 sandbox attempts only), ADR-0008 (academic finance simulation), ADR-0010 (academic storage installments/overstay/extensions), ADR-0011 (authentication/session/contact policy), ADR-0012 (admin operations and audit), `.ai/12-development-strategy.md`, and current issue decisions. Financial tables, if retained, model academic records and simulated external operations only; they must never imply ColdLink custody or real payout. Prisma mappings/conventions: `04`.
@@ -80,7 +82,7 @@ roles                                            -- both system-protected and ad
   role_key VARCHAR(50) PK                             -- 'farmer', 'provider', 'admin', 'support', ...
   name VARCHAR(100) · description VARCHAR(255) NULL
   is_system TINYINT(1) default 0                      -- true ONLY for farmer/provider/admin; immutable once set
-  status ENUM(active,inactive) default active         -- custom-role soft-delete; system roles never leave 'active'
+  status ENUM(active,inactive) default active         -- role deactivation; predefined roles remain editable
   created_at · updated_at
 
 user_roles                                       -- additive, many-to-many; a user's permission set

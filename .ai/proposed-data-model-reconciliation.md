@@ -36,7 +36,7 @@ The names below describe domain records, not classes. Modules retain the existin
 | **Authentication token record** | Stores token hashes and lifecycle metadata; refresh tokens are linked to a Session and rotation history is preserved. Raw tokens are not persisted. |
 | **Contact history** | Preserves prior email/phone values and verification/change history. A historical contact does not prove present ownership or merge accounts. |
 | **Profile** | Domain-specific information for an activity, such as farmer or provider. A profile grants no permission. A User may have several. |
-| **Role** | An editable, named collection of permissions. Its name carries no authority. The seeded baseline role is not an account type. |
+| **Role** | An editable, named collection of permissions. Initial setup seeds predefined roles such as `user`, `admin`, `farmer`, `provider`, and `staff`; they remain manageable and their names carry no authority. `user` is the registration baseline role, not an account type. |
 | **Permission** | A catalogued atomic resource/action key. The catalog is seeded/versioned; new keys are not automatically granted. |
 | **Role permission assignment** | Associates a Permission with a Role. |
 | **User role membership** | Associates a User with a Role. Registration assigns the approved baseline role. |
@@ -226,7 +226,7 @@ These choices are suitable for review and future ER-level modeling, but should n
 | **Recommendation table naming** | `10` S1 explicitly undecided: `recommendations` vs `service_recommendations`; ADR-0001 uses `service_recommendations` in its consequence text. | Canonical domain term is **Recommendation**; the physical table name remains open. Resolve in documentation/schema reconciliation, not by assuming table name from prose. |
 | **Quantities, date counting, and farm-location duplication** | `10` S2/S3 explicitly undecided. ADR-0009 specifies inclusive storage service days from Intake through Returned for refund valuation; it does not settle every storage-duration convention. | Confirm quantity units, general date-duration convention, and whether profile default coordinates are dropped in favor of Farm locations. Do not extend refund’s inclusive-day rule to unrelated calculations without approval. |
 | **Legal evidence requirements** | Issue #20 is closed as not planned. Manual admin review does not obtain DAM/BRTA confirmation or assert document types as legal requirements; no regulator integration. | Keep evidence categories admin-configurable at the approved level; do not encode legal-specific mandatory constraints. |
-| **Baseline role phrasing** | ADR-0003 and glossary establish a seeded, editable baseline role; older statements say “no built-in role.” | No domain relationship is open; wording needs reconciliation: no structural/account-type roles or authority-by-name, but an ordinary seeded baseline permission bundle is approved. |
+| **Predefined role seed and mutability** | ADR-0003 and glossary establish predefined editable roles (`user`, `admin`, `farmer`, `provider`, `staff`) and the `user` registration baseline. | Seed these as editable permission collections. Authorized administrators manage roles and their explicit permission assignments; names never grant authority and must not be used in authorization checks. |
 
 The first two questions—#15 lifecycle and payment-attempt ownership—materially affect the future ER diagram and should be resolved or explicitly shown as unresolved before a final diagram is approved.
 
@@ -236,7 +236,7 @@ This is a proposed change list only. No other document is changed by this task.
 
 | Document | Conflict or gap | Recommended update |
 |---|---|---|
-| `CONTEXT.md` | Current canonical glossary is broadly aligned, but should be cross-checked for terms around Bundle, Slot, component, verification, audit, and feature flags as the model is approved. | Keep as vocabulary authority; add only settled terms/clarifications. Preserve the existing superseded-term list. |
+| `CONTEXT.md` | Role glossary must distinguish predefined editable permission collections from fixed account types. | Keep as vocabulary authority; state that starter role names carry no authority. Preserve the legacy enum as superseded, not editable role records. |
 | `.ai/10-DB-SCHEMA.md` | Explicitly legacy/incomplete; contains `users.role`, structural role examples, provider service areas, one facility/vehicle per recommendation, one child component of each type, and incomplete authorization/finance/onboarding/audit records. | Replace/reconcile the planning model against approved decisions. Resolve S1–S3 and the relationships in §6. Label any still-open schema elements. Do not use as implementation contract until reviewed. |
 | `.ai/01-architecture.md` | Module list and interaction narrative do not fully show the accepted bundle/slot, multi-component, application/verification, disputes/academic finance, audit boundary, and feature-flag decisions in one reconciled model. | Align module ownership and examples with accepted ADRs and this model; preserve payment independence and audit ownership. Correct any legacy radius, single-resource, role, or finance language. |
 | `.ai/05-api-standards.md` | Several route/contract surfaces remain explicitly open; older examples are historical and some financial/authorization terms need harmonization. | Align API vocabulary and endpoint descriptions after #15 and schema reconciliation; do not invent routes or expose a presumed physical model. |
@@ -246,7 +246,7 @@ This is a proposed change list only. No other document is changed by this task.
 | `.ai/09-feature-progress.md` | Design decisions and implementation status can be mistaken for one another; feature modules remain unimplemented. | Keep code-inspected status authoritative; note approved designs do not mean schema/modules are implemented. |
 | `.ai/admin-console-permission-proposal.md` | Approved permission mapping is not yet seeded and remains catalog follow-up. | Keep it as permission traceability; ensure direct assignments and role-permission grants are represented in the data model without implying implementation. |
 | `.ai/adr/0001` and `.ai/adr/0002` | ADRs explicitly say schema reconciliation was not applied; ADR-0001’s original radius point is superseded. | Preserve the decision history; add reconciliation references only when approved. Do not rewrite superseded decision history as current rule. |
-| `.ai/adr/0003` | ADR correctly lists missing permission tables and notes older docs are not updated. | After model approval, reconcile dependent docs; do not change the accepted authorization decision. |
+| `.ai/adr/0003` | Its “no built-in role” wording conflicts with the approved predefined editable starter roles. | Clarify seeded role names, editability, the `user` registration baseline, and explicit-permission-only authority; preserve deny-wins/default-deny and never authorize by role name. |
 | `.ai/adr/0005` | Accepted workflow requires distinct application/capability/resource records and histories, not yet reflected in `10`. Issue #20 is closed as not planned. | Use this model as a reference; provider verification is manual admin review without DAM/BRTA confirmation or regulator integration. |
 | `.ai/adr/0006` and `.ai/payment-sandbox-scope.md` | Payment-attempt ownership/precise relationship remains open by design. | Keep the constraint and record the eventual decision separately; do not imply booking lifecycle ownership by Payment. |
 | `.ai/adr/0008`, `.ai/adr/0009`, `.ai/adr/0010` | Approved simulated financial workflows are only partially represented in `10`; implementation tracked in #21–23. | Reconcile entity/history relationships while preserving simulation-only boundaries and each policy’s scope. |
@@ -260,7 +260,7 @@ This is a proposed change list only. No other document is changed by this task.
 
 | Modeling decision / constraint | Source of authority |
 |---|---|
-| User has no fixed account type; profiles do not grant authority | `CONTEXT.md` §§Identity and access; ADR-0003; issue #9 decision outcome |
+| User has no fixed account type; predefined editable roles are permission collections and profiles do not grant authority | `CONTEXT.md` §§Identity and access; ADR-0003; issue #9 decision outcome |
 | Roles are editable permission collections; permission catalog, role grants, memberships, direct ALLOW/DENY assignments; no provider-scoped permissions; deny-wins/default-deny | ADR-0003; issue #9; `.ai/admin-console-permission-proposal.md` |
 | Verified email, multiple sessions, refresh-token rotation, unverified optional phone, contact history | ADR-0011; issue #13; `CONTEXT.md` |
 | Separate service application, independent capability decisions, resource verification, evidence/history | ADR-0005; closed issue #7; issue #20 closed as not planned; manual admin review only |
@@ -286,7 +286,7 @@ This is a proposed change list only. No other document is changed by this task.
 
 ### Reconciled in this proposal
 
-- Removed legacy structural-role interpretation while retaining editable permission collections and the approved baseline role.
+- Removed legacy structural-role interpretation while retaining predefined, editable permission collections and the approved `user` baseline role; role names never grant authority.
 - Replaced provider-level service area with vehicle-owned circular service area.
 - Reframed recommendation persistence as Bundle plus multiple fulfillment Slots and booking fulfillment as multiple independently fulfilled components.
 - Added the approved logical concepts for onboarding/verification, disputes, simulated finance, payment attempts, feature-flag archival, and shared audit recording.

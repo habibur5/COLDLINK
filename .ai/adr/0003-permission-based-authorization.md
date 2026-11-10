@@ -1,6 +1,6 @@
 # ADR-0003: Permission-based authorization — deny-wins, party-scoped, resolved server-side
 
-**Status:** Accepted (MVP scope) — supersedes any authorization based on named roles, account types, or the `users.role` enum. Complements [ADR-0001](0001-bundle-based-matching-and-recommendations.md) and [ADR-0002](0002-per-vehicle-service-area.md), which are unaffected.
+**Status:** Accepted (MVP scope) — supersedes authorization based on account types, the legacy `users.role` enum, or role names. Predefined roles are permitted as editable permission collections; their names never grant authority. Complements [ADR-0001](0001-bundle-based-matching-and-recommendations.md) and [ADR-0002](0002-per-vehicle-service-area.md), which are unaffected.
 **Date context:** decided during the Wayfinder decision phase, before any application code existed.
 
 ## Context
@@ -12,12 +12,14 @@ The original design carried a fixed account type — `users.role` with `farmer |
 3. **Fixed roles cannot be reconfigured.** Operations need to be adjustable at runtime — a support person granted exactly one capability, a provider suspended, a new privileged action introduced — without code changes or a schema migration of an enum.
 4. **Revocation must be immediate.** Suspending a user or withdrawing a permission has to take effect *now*. Any scheme that embeds authority in a token defers revocation until the token expires, which is unacceptable for suspensions and for money-adjacent operations.
 
-The decision phase established the policy first (custom roles, no built-in admin role, explicit DENY always wins, default deny, feature flags separate from permissions). This ADR records the resulting model in full.
+The decision phase established the policy first (explicit permissions, editable role collections, explicit DENY always wins, default deny, feature flags separate from permissions). This ADR records the resulting model in full.
 
 ## Decision
 
-**1. Authority is a named permission, never a role or account type.**
-A **permission** is an atomic capability to perform one operation on one resource, named `<resource>.<action>` — lowercase kebab-case ASCII, separator `.` (e.g. `facility.update`, `booking.cancel`, `refund.approve`, `payment.refund`, `role.assign`). Actions are `create`, `read`, `update`, `delete`, or a business verb where the domain needs one (`approve`, `reject`, `cancel`, `verify`, `suspend`, `reinstate`, `refund`, `waive`, `settle`, `resolve`, `assign`, `export`). `<resource>.*` is a resource wildcard. **Granularity is resource + action only — never per-field, never per-record.** A **role** is a named, admin-defined collection of permissions; the name carries no authority. There is no built-in role.
+**1. Authority is a named permission, never a role name or account type.**
+A **permission** is an atomic capability to perform one operation on one resource, named `<resource>.<action>` — lowercase kebab-case ASCII, separator `.` (e.g. `facility.update`, `booking.cancel`, `refund.approve`, `payment.refund`, `role.assign`). Actions are `create`, `read`, `update`, `delete`, or a business verb where the domain needs one (`approve`, `reject`, `cancel`, `verify`, `suspend`, `reinstate`, `refund`, `waive`, `settle`, `resolve`, `assign`, `export`). `<resource>.*` is a resource wildcard. **Granularity is resource + action only — never per-field, never per-record.** A **role** is a named, admin-defined collection of permissions; the name carries no authority.
+
+Initial setup seeds editable predefined roles, including `user`, `admin`, `farmer`, `provider`, and `staff`. These are starter permission collections, not account types or immutable system roles. Authorized administrators may create, update, assign, deactivate, and manage their permissions through the role-management system, subject to the same permission resolver, audit, and other approved authorization rules. No role receives authority from its name; each role grants only its explicitly assigned permissions. The `user` role is the existing baseline role granted at registration, with only the ordinary permissions explicitly assigned to it. Any bootstrap administrator access is likewise represented by explicit permission assignments, never by checking the `admin` name.
 
 **2. There is no global wildcard.**
 `*` does not exist. The bootstrap **Platform Admin** holds every curated key explicitly. The catalog is a **fixed, seeded, versioned list**, extended only by migration; the migration that introduces a key assigns it to the Platform Admin explicitly. New keys are never granted automatically to ordinary roles.
@@ -44,7 +46,7 @@ Any change to roles, permissions, assignments or suspension state invalidates th
 Every change records actor, target type and id, before/after state, timestamp and reason, with **reason mandatory for DENY grants and deletions**. Role create/update/delete, permission grant/revoke, role assign/unassign, user-level ALLOW/DENY changes, catalog seeding and recovery-command execution are all audited. Permission *evaluation failures* go to security logs, not the audit log.
 
 **10. Registration grants a baseline, and bootstrap is explicit.**
-A newly registered account receives one seeded, **admin-editable baseline role** holding ordinary capabilities (own account, profile and sessions; farm locations; catalog reading; service requests; recommendations; booking create/read/cancel; own payment/installment/refund/ledger reads; reviews; disputes; notifications). It contains no `.any` keys and no administrative, provider-approval or settlement capability. The initial Platform Admin is seeded with every curated permission, and the one-time System Admin recovery command remains atomic, refuses re-execution, and survives restarts and migrations.
+A newly registered account receives the seeded, **admin-editable `user` baseline role** holding ordinary capabilities (own account, profile and sessions; farm locations; catalog reading; service requests; recommendations; booking create/read/cancel; own payment/installment/refund/ledger reads; reviews; disputes; notifications). It contains no `.any` keys and no administrative, provider-approval or settlement capability. Predefined role names, including `admin`, do not imply permissions. Any initial Platform Admin access is provisioned through explicit assignments of curated permissions; the one-time System Admin recovery command remains atomic, refuses re-execution, and survives restarts and migrations.
 
 ## Consequences
 
@@ -58,7 +60,7 @@ A newly registered account receives one seeded, **admin-editable baseline role**
 
 ## Alternatives considered
 
-- **Keep `users.role` (`farmer | provider | admin`) and add more values** — rejected; still single-valued, still conflates identity with capability, and still cannot express one person holding several domain relationships.
+- **Keep `users.role` (`farmer | provider | admin`) as an account-type enum or authorize by role name** — rejected; it conflates identity with capability and cannot express one person holding several domain relationships. Editable predefined roles remain supported as permission collections.
 - **Role-name-based checks with an implicit "admin bypasses everything"** — rejected; a hidden bypass is unauditable and makes cross-party access impossible to reason about. Cross-party access is now an explicit `.any` permission.
 - **Embed permissions in the access token** — rejected; revocation and suspension would be delayed until token expiry, which is unacceptable for suspensions and money-adjacent operations. Tokens carry identity only.
 - **TTL-only cache expiry instead of invalidation** — rejected for the same reason; a short TTL remains only as a backstop.

@@ -24,7 +24,7 @@ The frontend calls high-level operations; it does not orchestrate internal algor
 | payments | Authenticated payment initiation plus provider-specific callback/return/IPN endpoints; exact paths and request/response contracts are defined during #19 implementation |
 | notifications | `GET /notifications` |
 | feature-flags | `GET /admin/feature-flags` · `PATCH /admin/feature-flags/:flagKey` (global default) · `PUT /admin/feature-flags/:flagKey/overrides/:scope/:scopeId` `DELETE .../overrides/:scope/:scopeId` (`scope` = `role`\|`provider`\|`user`; `scopeId` is a `role_key` when `scope=role`, a `userId` otherwise) |
-| roles and authorization | Existing admin role/assignment examples are historical; custom-role and permission-management operations must follow ADR-0003 and #11. There are no structural roles or `users.role` checks. Exact route paths/contracts for permission catalog, role, and user-assignment operations remain to be reconciled before implementation. |
+| roles and authorization | Initial setup seeds editable `user`, `admin`, `farmer`, `provider`, and `staff` roles; these are permission collections, not account types, and names grant no authority. Role and permission management must follow ADR-0003 and #11. The legacy structural `users.role` enum and name-based checks are not used. Exact route paths/contracts for permission catalog, role, and user-assignment operations remain to be reconciled before implementation. |
 | admin console | Backend operations and operation-permission requirements are defined by #11 and ADR-0012. The UI is deferred. Exact routes/contracts remain to be designed; do not infer additional operations from this scope. |
 | health | `GET /health` `/health/database` (root path) |
 

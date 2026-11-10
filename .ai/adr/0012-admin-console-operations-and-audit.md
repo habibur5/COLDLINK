@@ -4,14 +4,14 @@
 
 ## Context
 
-Issue #11 establishes a bounded backend admin console spanning production-grade operational work and academic-grade financial workflows. The project already rejects authority based on role names (ADR-0003), but the console additionally needs explicit staff operations, lifecycle actions, sensitive financial reads, and auditable administrative decisions. A role-based console or generic status editor would conflict with the authorization model and domain state machines.
+Issue #11 establishes a bounded backend admin console spanning production-grade operational work and academic-grade financial workflows. The project supports predefined, editable roles (ADR-0003), but rejects authority based on role names. The console additionally needs explicit staff operations, lifecycle actions, sensitive financial reads, and auditable administrative decisions. A role-name-based console or generic status editor would conflict with the authorization model and domain state machines.
 
 ## Decisions
 
 ### Surface and authority
 
 1. V1 defines backend `/admin/*` operations; an admin UI is deferred. Exact routes and request/response contracts are API-design work and must not be inferred from this ADR.
-2. Every console operation requires its own explicit permission. A staff member may perform any operation explicitly granted to them, independent of role name. A role named `admin`, `support`, or similar grants no authority by itself.
+2. Every console operation requires its own explicit permission. A staff member may perform any operation explicitly granted to them, independent of role name. Predefined roles such as `admin` and `staff` are editable permission collections; neither name grants authority by itself.
 3. Permission grants, modifications, and revocations require the corresponding permission-management permission. A Platform Admin or another explicitly authorized permission manager may perform them. The Platform Admin has no implicit bypass; curated permission keys are held explicitly, per ADR-0003.
 4. Permission scope follows ADR-0003: the base permission covers records where the caller is a party; `.any` is used only for cross-party access. There is no `.own` suffix. Each distinct operation receives a separate permission; this ADR does not expand the general permission catalog beyond #11's required operations.
 
